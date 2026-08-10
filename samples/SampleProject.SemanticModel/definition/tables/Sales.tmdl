@@ -1,0 +1,106 @@
+/// Sales transactions fact table
+table Sales
+	isHidden: false
+
+	/// Unique order identifier
+	column OrderID
+		dataType: int64
+		sourceColumn: OrderID
+		summarizeBy: none
+
+	/// Date of the sale
+	column OrderDate
+		dataType: dateTime
+		formatString: Short Date
+		sourceColumn: OrderDate
+		summarizeBy: none
+
+	/// Built in Power Query from ProductID and OrderID, and then used as a
+	/// relationship key. Exists in no source table, which is what makes the
+	/// two columns behind it easy to drop by accident.
+	column ProductKey
+		dataType: int64
+		sourceColumn: ProductKey
+		summarizeBy: none
+		isHidden: true
+
+	/// Second date on the fact, joined to the same Date dimension. The
+	/// relationship on it is inactive, which is what makes this column
+	/// invisible to everything except a measure that names it.
+	column ShipDate
+		dataType: dateTime
+		formatString: Short Date
+		sourceColumn: ShipDate
+		summarizeBy: none
+
+	column ProductID
+		dataType: int64
+		sourceColumn: ProductID
+		summarizeBy: none
+		isHidden: true
+
+	column CustomerID
+		dataType: int64
+		sourceColumn: CustomerID
+		summarizeBy: none
+		isHidden: true
+
+	/// Quantity sold
+	column Quantity
+		dataType: int64
+		sourceColumn: Quantity
+		summarizeBy: sum
+
+	/// Unit price in USD
+	column UnitPrice
+		dataType: decimal
+		formatString: \$#,0.00;(\$#,0.00);\$#,0.00
+		sourceColumn: UnitPrice
+		summarizeBy: none
+
+	/// Total revenue for this line item
+	measure 'Total Revenue' =
+		SUMX(Sales, Sales[Quantity] * Sales[UnitPrice])
+		formatString: \$#,0.00;(\$#,0.00);\$#,0.00
+		displayFolder: Revenue
+
+	/// Average revenue per order
+	measure 'Avg Revenue per Order' =
+		DIVIDE(
+			[Total Revenue],
+			DISTINCTCOUNT(Sales[OrderID])
+		)
+		formatString: \$#,0.00;(\$#,0.00);\$#,0.00
+		displayFolder: Revenue
+
+	/// Count of total orders
+	measure 'Order Count' =
+		DISTINCTCOUNT(Sales[OrderID])
+		formatString: #,0
+		displayFolder: Volume
+
+	/// Year-over-year revenue growth
+	measure 'Revenue YoY %' =
+		VAR CurrentRevenue = [Total Revenue]
+		VAR PriorYearRevenue =
+			CALCULATE(
+				[Total Revenue],
+				SAMEPERIODLASTYEAR('Date'[Date])
+			)
+		RETURN
+			DIVIDE(
+				CurrentRevenue - PriorYearRevenue,
+				PriorYearRevenue
+			)
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Revenue
+
+	partition Sales = m
+		mode: import
+		source =
+			let
+				Source = Sql.Database("server", "db"),
+				Sales = Source{[Schema="dbo",Item="Sales"]}[Data],
+				Keyed = Table.AddColumn(Sales, "ProductKey", each if [ProductID] = null then [OrderID] else [ProductID])
+			in
+				Keyed

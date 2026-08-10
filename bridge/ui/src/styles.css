@@ -1,0 +1,1380 @@
+@import "tailwindcss";
+
+/* React Flow's stylesheet is imported from main.jsx, not here: Tailwind v4
+   processes @import itself and drops parts of it, which silently breaks the
+   canvas z-index layering (the pane ends up above the nodes). */
+
+/* Latin subsets only — the full fontsource index pulls cyrillic, greek and
+   vietnamese too, which would inline four times the bytes for nothing. Both
+   files are base64'd into the report by build.assetsInlineLimit. */
+@font-face {
+    font-family: "Inter var";
+    font-style: normal;
+    font-display: block;
+    font-weight: 100 900;
+    src: url("@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2");
+}
+@font-face {
+    font-family: "JetBrains Mono var";
+    font-style: normal;
+    font-display: block;
+    font-weight: 100 800;
+    src: url("@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
+}
+
+/*
+ * Tokens. See docs/design-system.md — every value here was decided there, and
+ * every colour ratio in the comments was measured, not estimated.
+ *
+ * Palette is light-first and re-declared for both dark triggers: the explicit
+ * [data-theme="dark"] toggle and the system preference. Nothing gets its only
+ * definition inside a media query.
+ */
+:root {
+    --font-ui: "Inter var", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "JetBrains Mono var", ui-monospace, SFMono-Regular, "Cascadia Mono", Consolas, monospace;
+
+    --fs-display: 30px;
+    --fs-h1: 19px;
+    --fs-h2: 16px;
+    --fs-h3: 14px;
+    --fs-body: 13px;
+    --fs-sm: 12px;
+    --fs-code: 12.5px;
+
+    --icon-sm: 14px;
+    --icon-md: 18px;
+    --icon-lg: 22px;
+
+    --bg: #eef1f6;
+    --panel: #ffffff;
+    --panel-2: #f1f4f8;
+    --border: #dfe4ec;
+    --border-strong: #c6ceda;
+    --text: #0f1826;            /* 17.8 : 1 */
+    --text-2: #47536b;          /*  7.7 : 1 */
+    --muted: #626e82;           /*  5.2 : 1 — the floor for any grey text */
+    --accent: #4f46e5;          /*  6.3 : 1 */
+    --accent-soft: #eef0fe;
+    --ok: #047857;              /*  5.5 : 1 */
+    --warn: #b45309;            /*  5.0 : 1 */
+    --bad: #be123c;             /*  6.3 : 1 */
+
+    /* Layer ramp: cool -> warm, position in the sweep = position in the
+       pipeline. Assigned by index into the derived layer order, so it works
+       for bronze/silver/gold and staging/marts alike. */
+    --layer-0: #0e7490;
+    --layer-1: #1d4ed8;
+    --layer-2: #4f46e5;
+    --layer-3: #7c3aed;
+    --layer-4: #a21caf;
+    --layer-pbi: #b45309;       /* outside the sweep: the far side of the boundary */
+
+    --kind-source: #0f766e;
+    --kind-model: #1d4ed8;
+    --kind-snapshot: #0e7490;
+    --kind-table: #b45309;
+    --kind-page: #7c2d92;       /*  5.9 : 1 on --panel */
+    --kind-measure: #be123c;
+    --kind-visual: #7c3aed;
+
+    --r-sm: 6px;
+    --r-md: 10px;
+    --r-lg: 14px;
+
+    --sh-1: 0 1px 2px rgb(15 24 40 / .06);
+    --sh-2: 0 2px 8px rgb(15 24 40 / .08), 0 1px 2px rgb(15 24 40 / .04);
+    --sh-3: 0 8px 24px rgb(15 24 40 / .12);
+
+    --ease: cubic-bezier(.22, .61, .36, 1);
+    --ease-spring: cubic-bezier(.34, 1.3, .64, 1);
+    --dur-fast: 120ms;
+    --dur-base: 220ms;
+    --dur-slow: 420ms;
+
+    --rail-w: clamp(200px, 18vw, 380px);
+    --panel-w: clamp(320px, 35vw, 720px);
+
+    /* The app header, measured: 34px of brand over two lines of text, plus
+       py-3. Only the landing backdrop reads it — the header itself is laid out
+       by its content, so this is a description of that, not a constraint on it,
+       and a pixel either way is invisible under an opaque bar. */
+    --header-h: 69px;
+
+    /* Deliberately one dark ink for both themes rather than a per-theme token:
+       a scrim's job is to push what is behind it *down*, and in light theme a
+       light scrim cannot. */
+    --scrim-ink: #0a0f1c;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --bg: #0e131a;
+        --panel: #161c24;
+        --panel-2: #1e252f;
+        --border: #2b333f;
+        --border-strong: #3d4756;
+        --text: #e8eef7;
+        --text-2: #a7b4c6;
+        --muted: #8b98ab;
+        --accent: #8b9dff;
+        --accent-soft: #1d2440;
+        --ok: #34d399;
+        --warn: #fbbf24;
+        --bad: #fb7185;
+        --layer-0: #22d3ee;
+        --layer-1: #60a5fa;
+        --layer-2: #a5b4fc;
+        --layer-3: #c4b5fd;
+        --layer-4: #f0abfc;
+        --layer-pbi: #fbbf24;
+        --kind-source: #2dd4bf;
+        --kind-model: #60a5fa;
+        --kind-snapshot: #22d3ee;
+        --kind-table: #fbbf24;
+        --kind-page: #e879f9;
+        --kind-measure: #fb7185;
+        --kind-visual: #c4b5fd;
+        --sh-1: 0 1px 2px rgb(0 0 0 / .35);
+        --sh-2: 0 2px 8px rgb(0 0 0 / .45), 0 1px 2px rgb(0 0 0 / .3);
+        --sh-3: 0 8px 24px rgb(0 0 0 / .55);
+    }
+}
+
+:root[data-theme="dark"] {
+    --bg: #0e131a;
+    --panel: #161c24;
+    --panel-2: #1e252f;
+    --border: #2b333f;
+    --border-strong: #3d4756;
+    --text: #e8eef7;
+    --text-2: #a7b4c6;
+    --muted: #8b98ab;
+    --accent: #8b9dff;
+    --accent-soft: #1d2440;
+    --ok: #34d399;
+    --warn: #fbbf24;
+    --bad: #fb7185;
+    --layer-0: #22d3ee;
+    --layer-1: #60a5fa;
+    --layer-2: #a5b4fc;
+    --layer-3: #c4b5fd;
+    --layer-4: #f0abfc;
+    --layer-pbi: #fbbf24;
+    --kind-source: #2dd4bf;
+    --kind-model: #60a5fa;
+    --kind-snapshot: #22d3ee;
+    --kind-table: #fbbf24;
+    --kind-page: #e879f9;
+    --kind-measure: #fb7185;
+    --kind-visual: #c4b5fd;
+    --sh-1: 0 1px 2px rgb(0 0 0 / .35);
+    --sh-2: 0 2px 8px rgb(0 0 0 / .45), 0 1px 2px rgb(0 0 0 / .3);
+    --sh-3: 0 8px 24px rgb(0 0 0 / .55);
+}
+
+html, body, #root { height: 100%; margin: 0; }
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: var(--fs-body);
+    line-height: 1.55;
+    font-feature-settings: "cv05" 1, "ss03" 1;
+    -webkit-font-smoothing: antialiased;
+}
+* { box-sizing: border-box; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+input, select { font: inherit; color: inherit; }
+
+.mono { font-family: var(--font-mono); font-size: var(--fs-code); }
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* Section labels: the old 10px uppercase --muted was the real legibility
+   failure — small, tracked and low-contrast at once. */
+.label {
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-2);
+}
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/*
+ * React Flow surface.
+ *
+ * A flat fill gave the canvas no depth, so a card floating on it and a card
+ * sitting in a panel looked alike. The dotted ground is the same one the page
+ * layout uses — one vocabulary for "this is a canvas you can pan" — over a
+ * wash that lifts the centre, so the eye starts where the graph is laid out
+ * rather than anywhere. Both are near-invisible per pixel and unmistakable as
+ * a surface, which is the point: it must not compete with the nodes.
+ */
+.react-flow__background {
+    background-color: var(--bg);
+    background-image:
+        radial-gradient(ellipse 90% 70% at 50% 40%,
+            color-mix(in srgb, var(--panel) 62%, transparent), transparent 70%),
+        radial-gradient(circle at 1px 1px,
+            color-mix(in srgb, var(--text) 9%, transparent) 1px, transparent 0);
+    background-size: 100% 100%, 24px 24px;
+}
+.react-flow__attribution { display: none; }
+.react-flow__edge-path {
+    stroke: color-mix(in srgb, var(--muted) 42%, transparent);
+    /* One curve per pair of nodes; its weight is how many columns it carries,
+       set per-edge in LineageGraph.jsx and damped so a 40-column bundle is
+       heavier than a 4-column one without being a slab. */
+    stroke-width: calc(1.4 * var(--edge-weight, 1));
+    transition: stroke var(--dur-base) var(--ease), stroke-opacity var(--dur-base) var(--ease);
+}
+.react-flow__edge.is-dim .react-flow__edge-path { stroke-opacity: .1; }
+.react-flow__edge.is-declared .react-flow__edge-path { stroke-dasharray: 5 4; }
+.react-flow__handle { opacity: 0; }
+
+/* Reached through a step that names no columns: a real dependency, drawn at
+   half weight because it is the table's downstream and not provably this
+   column's. Same accent, less claim. */
+.react-flow__edge.is-lit.is-inferred .react-flow__edge-path {
+    stroke: color-mix(in srgb, var(--accent) 55%, transparent);
+    stroke-width: 1.8;
+    stroke-dasharray: 2 5;
+}
+.node-card.is-inferred:not(.is-selected) { border-style: dashed; }
+
+/* Lineage reveal: lit edges draw in from the selected node outward, staggered
+   by graph depth so the path visibly travels rather than appearing at once.
+   The dash length is set per-edge from its measured length. */
+.react-flow__edge.is-lit .react-flow__edge-path {
+    stroke: var(--accent);
+    stroke-width: 2.4;
+    stroke-opacity: 1;
+    animation: draw var(--dur-slow) var(--ease) both;
+    animation-delay: var(--reveal-delay, 0ms);
+}
+@keyframes draw {
+    from { stroke-dasharray: 1 9999; stroke-dashoffset: 0; opacity: .2; }
+    to   { stroke-dasharray: 9999 0;  stroke-dashoffset: 0; opacity: 1; }
+}
+
+.react-flow__node { transition: transform var(--dur-slow) var(--ease); }
+.react-flow__node.dragging,
+.react-flow__node.no-glide { transition: none; }
+
+.node-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: var(--sh-1);
+    width: 100%;
+    overflow: hidden;
+    transition:
+        opacity var(--dur-base) var(--ease),
+        border-color var(--dur-base) var(--ease),
+        box-shadow var(--dur-base) var(--ease),
+        transform var(--dur-base) var(--ease-spring);
+}
+.node-card:hover { box-shadow: var(--sh-2); }
+.node-card.is-dim { opacity: .28; }
+.node-card.is-lit {
+    border-color: var(--accent);
+    box-shadow: var(--sh-2);
+    transform: translateY(-1px);
+}
+.node-card.is-selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft), var(--sh-2);
+    transform: scale(1.015);
+}
+.node-accent { height: 3px; }
+
+.col-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 3px 10px; cursor: pointer; border-radius: var(--r-sm);
+    transition: background var(--dur-fast) var(--ease);
+}
+.col-row:hover { background: var(--panel-2); }
+.col-row.is-selected { background: var(--accent-soft); color: var(--accent); }
+/* The column this trace arrived at, on a card that is not the selected one.
+   Tables open collapsed, so this is the payoff for expanding one downstream:
+   the answer is "this column became that column", not just "this table".
+
+   Colour and weight, nothing structural.
+
+   A filled row came first and read as a selection — the same language the
+   actually-selected column uses — and where a trace arrives at several columns
+   the fills merged into one block. Replacing it with an edge rule plus a faded
+   remainder was worse: three treatments competing inside one small card, which
+   at a glance reads as damage rather than as a path.
+
+   So the name itself goes accent and semibold. The eye finds it immediately,
+   the row keeps its shape, and nothing around it has to be dimmed to make it
+   legible. */
+.col-row.is-traced {
+    color: var(--accent);
+    font-weight: 600;
+}
+/* The icon follows the text so the whole row reads as one mark. */
+.col-row.is-traced svg { color: currentColor; }
+
+/* Upstream (left) and downstream (right) one-hop handles. */
+.node-hops {
+    display: flex; align-items: center;
+    padding: 5px 8px;
+    border-top: 1px solid var(--border);
+    background: var(--panel-2);
+}
+.hop-btn {
+    display: grid; place-items: center;
+    width: 26px; height: 26px;
+    border: 1px solid var(--border); border-radius: var(--r-full, 999px);
+    background: var(--panel); color: var(--muted);
+    transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
+                transform var(--dur-fast) var(--ease-spring);
+}
+.hop-btn:hover { border-color: var(--accent); color: var(--accent); transform: scale(1.12); }
+
+/* The staged-reveal menu (see HopMenu in GraphNode.jsx).
+ *
+ * In a portal on <body>, so it is placed in screen coordinates and does not
+ * scale with the canvas zoom — hence `position: fixed` and the transform that
+ * centres it on the button rather than any flow-relative offset. z-index above
+ * the canvas and its panels, below the landing modal's 50. */
+.hop-menu {
+    position: fixed;
+    transform: translateX(-50%);
+    z-index: 30;
+    min-width: 208px;
+    padding: 4px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: var(--sh-3);
+    animation: hop-menu-in var(--dur-fast) var(--ease) both;
+}
+@keyframes hop-menu-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+    to   { opacity: 1; transform: translateX(-50%); }
+}
+.hop-menu-head {
+    padding: 6px 8px 4px;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: var(--muted);
+}
+.hop-menu [role="menuitemcheckbox"] {
+    width: 100%;
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 8px;
+    border-radius: var(--r-sm);
+    color: var(--text);
+    font-size: var(--fs-body);
+    text-align: left;
+}
+.hop-menu [role="menuitemcheckbox"]:hover:not(:disabled) { background: var(--panel-2); }
+.hop-menu [role="menuitemcheckbox"]:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+/* Greyed, present, and still readable: the count is the answer here. */
+.hop-menu [role="menuitemcheckbox"]:disabled { color: var(--muted); opacity: .7; }
+/*
+ * A kind that is on the canvas by some other route reads as *present*, not as
+ * absent — a zero row is greyed because there is nothing there, and this row is
+ * greyed for the opposite reason. So it keeps its colour and says so in the
+ * count, and only the label goes quiet.
+ */
+.hop-menu [role="menuitemcheckbox"][data-shown] { opacity: 1; }
+.hop-menu [role="menuitemcheckbox"][data-shown] .hop-menu-count { color: var(--ok); }
+/* Fixed gutter so the labels line up whether or not a kind is ticked. */
+.hop-menu-tick {
+    flex: none;
+    width: 14px;
+    display: grid; place-items: center;
+    color: var(--ok);
+}
+.hop-menu-count { flex: none; color: var(--muted); font-size: var(--fs-sm); }
+
+/* Pill tab track
+ *
+ * Two of the three tracks live in something the reader can drag narrower — the
+ * rail and the side panel — and both used to break there, differently. The rail
+ * stretches its pills with `flex-1`, so shrinking took them below their own
+ * label and the text spilled out past the rounded background; the panel's are
+ * natural width, so three of them simply grew wider than the panel and the last
+ * one was cut off by the header's clip.
+ *
+ * Both are the same mistake: a pill is a fixed shape with a word in it, and it
+ * has no smaller form. So the pills never shrink and the track scrolls instead
+ * — a tab you have to reach for is recoverable, a tab clipped in half is not.
+ * The scrollbar is hidden because it would sit across the pills at this height;
+ * the track is short enough that a partly-visible pill is the affordance. */
+.pill-track {
+    display: inline-flex; gap: 2px; padding: 3px;
+    background: var(--panel-2); border-radius: 999px;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.pill-track::-webkit-scrollbar { display: none; }
+
+/* Descendant selector on purpose: it has to outrank Tailwind's `.flex-1` in the
+   rail, which sets shrink as well as grow. Pinning shrink leaves the grow — the
+   pills still divide a wide rail evenly, they just stop dividing a narrow one
+   below their own text. */
+.pill-track > .pill { flex-shrink: 0; }
+
+.pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 999px;
+    font-size: var(--fs-sm); font-weight: 550; color: var(--muted);
+    white-space: nowrap;
+    transition: background var(--dur-base) var(--ease), color var(--dur-base) var(--ease),
+                box-shadow var(--dur-base) var(--ease);
+}
+.pill:hover { color: var(--text-2); }
+.pill.is-active { background: var(--panel); color: var(--text); box-shadow: var(--sh-1); }
+
+/* One chip spec, everywhere. The rail used to override the padding inline,
+   which is exactly why its badges never matched the panel's chips — counts now
+   have their own class instead of borrowing this one. */
+.chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; min-height: 24px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--panel-2);
+    font-size: var(--fs-sm); font-weight: 500; line-height: 1.35; color: var(--text-2);
+    white-space: nowrap;
+}
+.chip > svg { margin-left: -1px; }
+
+/* Numeric count badge: narrower than a chip because a number needs no room to
+   breathe sideways, and tabular so columns of them line up. */
+.badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 24px; padding: 1px 7px; border-radius: 999px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    font-size: var(--fs-sm); color: var(--muted);
+}
+
+/* Header metrics */
+/* Test count on a node card. Deliberately small and low-contrast: it is a
+   property worth a glance, not a number worth reading first. */
+.test-badge {
+    display: inline-flex; align-items: center; gap: 2px; flex: none;
+    font-size: var(--fs-sm);
+}
+.test-badge[data-tested="yes"] { color: var(--ok); }
+.test-badge[data-tested="no"] { color: var(--muted); opacity: .55; }
+
+/* A relationship a column takes part in. Quieter than a .chip: it is context on
+   a card, not a control. Inactive ones are dashed — the join exists but nothing
+   uses it unless a measure asks for it by name. */
+.rel-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--panel-2);
+    color: var(--text-2); font-size: var(--fs-sm); max-width: 100%;
+}
+.rel-chip .mono { font-family: var(--font-mono); font-size: var(--fs-code); overflow-wrap: anywhere; }
+.rel-chip.is-inactive { border-style: dashed; color: var(--muted); }
+/* Feeding a key is a weaker fact than being one. */
+.rel-chip.is-feeder { background: transparent; color: var(--muted); }
+.rel-off { text-transform: uppercase; letter-spacing: .04em; font-size: var(--fs-sm); }
+/* Only once expanded: about five rows, so it is visibly scrollable. */
+.rel-scroll { max-height: 180px; overflow-y: auto; }
+.rel-more {
+    margin-top: 4px; color: var(--accent); font-size: var(--fs-sm);
+}
+.rel-more:hover { text-decoration: underline; }
+
+/* ── Diagnostics tables ──────────────────────────────────────────────────────
+   One card per kind of gap. The visual weight is in the header row and the
+   severity dot; the rows themselves stay quiet, because a table where every
+   row is styled is a table nobody scans. */
+.dt-summary { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; }
+.dt-tally { display: inline-flex; align-items: center; gap: 7px; font-size: var(--fs-body); }
+.dt-dot {
+    width: 8px; height: 8px; border-radius: 999px; flex: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.dt-card {
+    border: 1px solid var(--border); border-radius: var(--r-lg);
+    background: var(--panel); box-shadow: var(--sh-1);
+    margin-bottom: 18px; overflow: hidden;
+}
+.dt-card-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    background: var(--panel-2);
+}
+.dt-count {
+    padding: 1px 8px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--panel);
+    color: var(--muted); font-size: var(--fs-sm);
+}
+.dt-hint {
+    padding: 10px 16px 0; color: var(--muted); font-size: var(--fs-sm);
+    max-width: 78ch;
+}
+.dt-empty {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 16px; color: var(--muted); font-size: var(--fs-sm);
+}
+/* A section with nothing in it: one quiet line, no card. */
+.dt-clear {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 16px; margin-bottom: 2px;
+    font-size: var(--fs-sm); color: var(--text-2);
+}
+.dt-rule {
+    width: 1px; height: 14px; background: var(--border); display: inline-block;
+}
+
+.dt-find { display: flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border: 1px solid var(--border);
+    border-radius: var(--r-md); background: var(--panel); }
+.dt-find input {
+    border: 0; outline: 0; background: transparent; color: var(--text);
+    font-size: var(--fs-sm); width: 15ch;
+}
+
+/* The scroller owns the horizontal overflow so the page body never does. */
+.dt-scroll { max-height: 420px; overflow-y: auto; overflow-x: hidden; margin-top: 10px; }
+
+/*
+ * Fixed layout: the declared column widths are honoured and the remainder is
+ * shared out, so the table is exactly as wide as its card. Under auto layout a
+ * single long identifier set the min-content width and pushed a horizontal
+ * scrollbar onto the card.
+ */
+table.dt {
+    width: 100%; table-layout: fixed;
+    border-collapse: collapse; font-size: var(--fs-body);
+}
+table.dt th {
+    position: sticky; top: 0; z-index: 1;
+    text-align: left; font-weight: 600;
+    overflow-wrap: break-word; hyphens: none;
+    padding: 8px 10px; color: var(--muted);
+    font-size: var(--fs-sm); letter-spacing: .02em; text-transform: uppercase;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+}
+table.dt td {
+    /* 10px, not 16: four columns of padding is 128px of a 560px card, and a
+       column narrower than the word it holds breaks that word mid-syllable —
+       "Perform / ance Summary" — which reads as a different page name. */
+    padding: 8px 10px; vertical-align: top;
+    border-top: 1px solid var(--border);
+    /* Long identifiers wrap rather than widening the table past the card.
+       `break-word`, not `anywhere`: anywhere breaks at the first character
+       that will not fit, so "Performance Summary" came out as "Perform / ance
+       Summary" while a perfectly good space sat one word away. break-word takes
+       the spaces first and only splits a token that cannot fit a line on its
+       own, which is what a long identifier actually needs. `hyphens: none`
+       keeps such a split from rendering a hyphen the name does not contain. */
+    overflow-wrap: break-word; hyphens: none;
+}
+table.dt tbody tr:nth-child(even) { background: color-mix(in srgb, var(--panel-2) 55%, transparent); }
+table.dt tbody tr:hover { background: var(--accent-soft); }
+table.dt td.mono { font-family: var(--font-mono); font-size: var(--fs-code); }
+
+.dt-act { width: 6.5rem; text-align: right; white-space: nowrap; }
+.dt-open {
+    display: inline-flex; align-items: center; gap: 2px;
+    padding: 2px 8px; border-radius: var(--r-md);
+    border: 1px solid transparent; color: var(--accent);
+    font-size: var(--fs-sm);
+}
+.dt-open:hover { border-color: var(--border); background: var(--panel-2); }
+
+.dt-more {
+    width: 100%; padding: 10px 16px; border-top: 1px solid var(--border);
+    color: var(--accent); font-size: var(--fs-sm); background: var(--panel);
+}
+.dt-more:hover { background: var(--panel-2); }
+
+/* Layout-in-progress. Engaged only past 120ms — see LineageGraph. */
+.is-blurred { filter: blur(2.5px) saturate(.7); opacity: .75; }
+
+.canvas-busy { animation: fade-in var(--dur-base) var(--ease) both; }
+.busy-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px; border-radius: var(--r-lg);
+    background: var(--panel); border: 1px solid var(--border);
+    box-shadow: var(--sh-3); font-size: var(--fs-body);
+}
+.busy-bar {
+    margin-top: 7px; height: 3px; width: 180px; border-radius: 999px;
+    background: var(--panel-2); overflow: hidden;
+}
+.busy-bar > span {
+    display: block; height: 100%; width: 40%; border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), var(--layer-0));
+    animation: slide 1.1s var(--ease) infinite;
+}
+.spin { animation: spin 900ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes slide { from { transform: translateX(-110%); } to { transform: translateX(260%); } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* Fields-used groups in the Definition tab */
+/*
+ * Fields used.
+ *
+ * Zebra striping went: it was decoration carrying no information, and it made
+ * a hoverable row indistinguishable from a dead one. A field is a control now
+ * — it traces its own lineage — so it reads as one: a hairline that warms on
+ * hover, and a chevron that only appears when there is somewhere to go.
+ */
+.role-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 6px;
+}
+
+/* The role's colour, carried on a tinted square rather than on the text: a
+   coloured label competes with the field names below it for attention. */
+.role-chip {
+    display: grid; place-items: center;
+    width: 22px; height: 22px;
+    border-radius: 7px;
+    color: var(--role);
+    background: color-mix(in srgb, var(--role) 14%, transparent);
+}
+
+.role-name {
+    font-size: var(--fs-sm); font-weight: 600;
+    letter-spacing: .02em; color: var(--text);
+}
+
+.role-count {
+    margin-left: auto;
+    padding: 1px 7px; border-radius: 999px;
+    font-size: var(--fs-sm);
+    color: var(--role);
+    background: color-mix(in srgb, var(--role) 12%, transparent);
+}
+
+.field-row {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; text-align: left;
+    padding: 6px 10px; margin-bottom: 2px;
+    border: 1px solid transparent;
+    border-radius: var(--r-sm);
+    transition: background var(--dur-fast) var(--ease),
+                border-color var(--dur-fast) var(--ease);
+}
+.field-row .field-name { min-width: 0; overflow-wrap: anywhere; flex: 1; }
+
+.field-row.is-linked { cursor: pointer; }
+.field-row.is-linked:hover {
+    background: var(--accent-soft);
+    border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.field-row.is-linked:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px;
+}
+
+/* Revealed on hover only: a chevron on every row is 23 arrows pointing at
+   nothing in particular. */
+.field-go {
+    color: var(--accent); opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease);
+}
+.field-row.is-linked:hover .field-go,
+.field-row.is-linked:focus-visible .field-go { opacity: 1; }
+
+/* The one thing to press on a leaf's panel. Accent-filled rather than
+   outlined: it is the only route from a box on a page to the lineage behind
+   it, and an outlined button beside outlined rows is not a route, it is
+   another row. */
+.trace-cta {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 10px 12px; margin-bottom: 14px;
+    border-radius: var(--r-md); cursor: pointer;
+    background: var(--accent-soft);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    color: var(--accent); font-weight: 600;
+    transition: background var(--dur-fast) var(--ease);
+}
+.trace-cta:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.trace-cta:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.trace-cta-sub {
+    display: block; margin-top: 2px;
+    font-weight: 400; font-size: var(--fs-sm); color: var(--text-2);
+}
+
+/* Back. Quiet until wanted — it is the second thing you reach for, after
+   whatever the panel is actually saying. */
+.panel-back {
+    flex: none; margin-top: 1px; padding: 3px; border-radius: var(--r-sm);
+    color: var(--muted); cursor: pointer;
+    transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.panel-back:hover { background: var(--accent-soft); color: var(--accent); }
+.panel-back:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Why the boxes below are lit. A band rather than a chip: it explains the
+   whole canvas under it, and it has to be readable before the eye reaches the
+   page. */
+.trace-note {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 12px; border-bottom: 1px solid var(--border);
+    background: var(--accent-soft); color: var(--accent);
+    font-size: var(--fs-sm);
+}
+.trace-note-clear {
+    flex: none; padding: 1px 9px; border-radius: 999px; cursor: pointer;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    color: var(--accent);
+    transition: background var(--dur-fast) var(--ease);
+}
+.trace-note-clear:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.trace-note-clear:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/*
+ * Diagnostics: findings side by side, reassurances gathered above them.
+ *
+ * One section per row meant scrolling past eight "none"s to reach three
+ * findings, down a page two thirds of which was margin. Column packing rather
+ * than a fixed pair of columns, so a narrow window falls back to one without a
+ * breakpoint to maintain, and a section with wide rows can take the full
+ * width. A clean section is a one-line reassurance and gets a strip, not a
+ * card-sized slot. The page itself takes the whole window; the tab's own
+ * padding is the only gutter.
+ */
+.dt-page { width: 100%; }
+/*
+ * Masonry, not a grid. In a grid the row height is the tallest card in it, so
+ * a one-row section beside a forty-row one left a card's worth of dead space
+ * below it; stretching the short card only moved that emptiness inside its
+ * own border. Multi-column packing lets each card end where its content ends
+ * and pulls the next one up behind it, which is what the reader wants from a
+ * worklist. `column-span: all` keeps the wide sections full-bleed.
+ */
+.dt-grid { columns: 620px; column-gap: 14px; }
+.dt-grid > * { break-inside: avoid; }
+.dt-grid-wide { column-span: all; }
+.dt-clean-strip { display: flex; flex-wrap: wrap; gap: 4px 20px; margin-bottom: 14px; }
+.dt-clean-strip .dt-clear { margin: 0; padding: 6px 0; flex: 0 0 auto; }
+
+/*
+ * Panels as cards on a ground, rather than regions divided by hairlines.
+ *
+ * The rail, the canvas and the detail pane were three full-bleed columns
+ * separated by 1px borders — which is what an application chrome looked like
+ * when the window *was* the chrome. Rounding them and letting the background
+ * show between says the same thing about structure with less ink, and it
+ * matches the cards already on the canvas, the palette and the first screen.
+ */
+.app-body { padding: 10px; gap: 2px; }
+.surface {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--sh-1);
+}
+
+/* The opening screen. A card rather than centred prose, because it has to
+   read as the thing to act on and not as an error. */
+.blank-card {
+    max-width: 460px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 28px 30px; border-radius: var(--r-lg);
+    background: var(--panel); border: 1px solid var(--border);
+    box-shadow: var(--sh-2);
+}
+.blank-title { font-size: var(--fs-h1); font-weight: 600; }
+.blank-body { margin: 0; color: var(--text-2); }
+.blank-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 4px; }
+.blank-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 16px; border-radius: var(--r-md); cursor: pointer;
+    background: var(--accent); color: #fff; font-weight: 600;
+}
+.blank-secondary {
+    padding: 9px 16px; border-radius: var(--r-md); cursor: pointer;
+    border: 1px solid var(--border); color: var(--text-2);
+}
+.blank-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.blank-foot { margin: 2px 0 0; color: var(--muted); font-size: var(--fs-sm); }
+
+/* A chip you can press. Same shape as a static chip — the hover is what says
+   it goes somewhere, so a page of them does not read as a page of buttons. */
+.chip-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 2px 9px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--panel-2);
+    color: var(--text); font-size: var(--fs-sm); cursor: pointer;
+    transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.chip-link:hover { background: var(--accent-soft); border-color: var(--accent); }
+.chip-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* How far back the field reaches. Secondary weight on purpose: it qualifies
+   the name, it does not compete with it. */
+.field-depth {
+    flex: none; color: var(--muted); font-size: var(--fs-sm);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+
+/* A field the semantic model does not hold. Shown rather than dropped, so the
+   list and the field count on the card agree. */
+.field-row.is-orphan { opacity: .65; cursor: default; }
+.field-orphan-tag {
+    flex: none; padding: 1px 6px; border-radius: 999px;
+    font-size: var(--fs-sm); color: var(--muted);
+    border: 1px dashed var(--border);
+}
+
+/* Resize handles — 6px hit area, grip revealed on hover. */
+.resizer {
+    flex: none; width: 6px; cursor: col-resize;
+    display: grid; place-items: center;
+    background: transparent;
+    transition: background var(--dur-fast) var(--ease);
+}
+.resizer:hover, .resizer.is-active { background: var(--accent-soft); }
+.resizer > svg { opacity: 0; transition: opacity var(--dur-fast) var(--ease); color: var(--muted); }
+.resizer:hover > svg, .resizer.is-active > svg { opacity: 1; }
+
+/* Collapsible body that animates height without a hardcoded pixel value.
+   Named "disclosure", not "collapse": Tailwind ships a .collapse utility
+   (visibility: collapse) that silently wins and hides the content. */
+.disclosure { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--dur-base) var(--ease); }
+.disclosure.is-open { grid-template-rows: 1fr; }
+.disclosure > div { overflow: hidden; min-height: 0; }
+
+.scrollbar-thin::-webkit-scrollbar { width: 9px; height: 9px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 5px; }
+.scrollbar-thin::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 1ms !important;
+        animation-delay: 0ms !important;
+        transition-duration: 1ms !important;
+    }
+    /* The blanket 1ms above would spin these a thousand times a second rather
+       than calming them, so the looping ones are stopped outright. */
+    .spin, .busy-bar > span { animation: none !important; }
+}
+
+/* Column cards in the Metadata tab. Lineage is the left edge rather than a
+   chip per row: 28 chips in a gutter is noise, an edge is a pattern. */
+.col-card { display: flex; gap: 10px; padding: 9px 12px 9px 0; background: var(--panel); }
+.col-card:hover { background: var(--panel-2); }
+.col-card-edge { flex: none; width: 3px; border-radius: 0 3px 3px 0; align-self: stretch; }
+
+/* Join-key mark on a column row. Solid = this is a key; faint = it feeds one.
+   Same glyph deliberately: the same warning at two strengths. */
+.col-key { flex: none; }
+.col-key[data-strength="key"] { color: var(--accent); }
+.col-key[data-strength="feeder"] { color: var(--muted); opacity: .6; }
+
+/*
+ * The page-layout canvas.
+ *
+ * A dotted ground rather than a flat panel: it makes panning legible — without
+ * a texture behind it, dragging a page across an empty background looks like
+ * nothing is happening until the page hits an edge.
+ */
+.page-canvas {
+    background-color: var(--bg);
+    background-image: radial-gradient(circle at 1px 1px,
+        color-mix(in srgb, var(--text) 12%, transparent) 1px, transparent 0);
+    background-size: 22px 22px;
+}
+
+/* "This one." Arriving from an affected-visuals list, the box you asked for
+   rings twice and stops. Motion says here without adding a state you have to
+   tell apart from lit; it fades because after a second you have found it. */
+@keyframes arrived {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent); }
+    50%      { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 0%, transparent); }
+}
+.is-arrived { animation: arrived 800ms var(--ease) 2; }
+@media (prefers-reduced-motion: reduce) {
+    .is-arrived { animation: none; outline: 2px solid var(--accent); }
+}
+
+/* Floating controls. Glass so the canvas stays visible under them, which is
+   what keeps this reading as a canvas and not as a toolbar strip. */
+.canvas-dock {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--panel) 82%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: var(--sh-2);
+}
+
+.canvas-dock button {
+    display: grid;
+    place-items: center;
+    min-height: 28px;
+    padding: 0 8px;
+    border-radius: 999px;
+    color: var(--muted);
+    font-size: var(--fs-sm);
+    transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.canvas-dock button:hover {
+    background: var(--panel-2);
+    color: var(--text);
+}
+
+.canvas-dock-sep {
+    width: 1px;
+    height: 18px;
+    margin: 0 2px;
+    background: var(--border);
+}
+
+/* ==========================================================================
+ * The landing page (web build only).
+ *
+ * Everything below is one card on the same ground the views sit on, because the
+ * page someone lands on and the app they end up in have to read as one product
+ * — a differently-styled upload page would look like a gate in front of the
+ * tool rather than the first screen of it.
+ * ========================================================================== */
+
+/* The app is mounted underneath from the first paint, so this stack has three
+   layers: the real app at 0, one drawn lineage over it, and the modal over
+   both. See web/main.jsx and BackdropGraph in web/Landing.jsx. */
+.app-under { height: 100%; }
+
+/* While the modal is up the page behind must not scroll, and the canvas must
+   not argue with the picture drawn over it: its empty state is a card in the
+   middle of the ground, which is exactly where the backdrop lineage runs. */
+html.landing-open, html.landing-open body { overflow: hidden; }
+html.landing-open [data-testid="canvas-blank"] { display: none; }
+
+/* The rail goes too, and its resizer with it.
+ *
+ * It is a navigation control for a graph that does not exist yet, and it sat
+ * directly over the left lane of the drawn lineage — two stacked pictures of
+ * the same idea, one of them empty. Behind the modal the app is a header and a
+ * canvas: the frame of the product, and the graph the card is asking for. */
+html.landing-open [data-testid="layer-nav"],
+html.landing-open [data-testid="resizer-left"] { display: none; }
+
+/*
+ * The drawn lineage behind the blur. Decorative in every sense that matters:
+ * aria-hidden, unclickable, and unmounted with the modal.
+ */
+.landing-art {
+    position: fixed;
+    /* Below the header, not behind it.
+     *
+     * `inset: 0` ran the drawing up under the real header, where the top lane
+     * of node cards crossed the product name — two things claiming the same
+     * pixels. The header is the app's own frame and stays crisp; the scenery
+     * starts where the canvas does. */
+    inset: var(--header-h) 0 0 0;
+    z-index: 40;
+    pointer-events: none;
+    /* Scenery that reads as data is a lie the reader has to work out — but the
+       way to hold it back is the scrim over it, not a faded drawing. Faded, the
+       cards lose their kind colours and the whole thing turns to grey smudges;
+       at full strength under a heavier scrim it stays a lineage graph that
+       happens to be behind something. */
+    opacity: .85;
+    animation: landing-art-in var(--dur-slow) var(--ease) both;
+}
+
+/* Full-bleed, not centred and capped.
+ *
+ * It was 1100px wide in the middle of the window, which is precisely where the
+ * 860px card sits: the reader got two pale slivers in the gutters and no
+ * evidence of a graph anywhere. The lineage now runs the whole width, so the
+ * part of it that is *not* behind the card — two lanes of node cards and the
+ * edges between them — is the part the reader sees. */
+.landing-art > svg { width: 100%; height: 100%; display: block; }
+
+/* `color` is set per card to a kind token, so one rule paints the rail, the
+   fill and the text lines in that kind's colour — the same association the
+   real node cards make. */
+.landing-art-card rect {
+    fill: color-mix(in srgb, currentColor 7%, var(--panel));
+    stroke: color-mix(in srgb, currentColor 40%, var(--border));
+    stroke-width: 1;
+}
+.landing-art-card .landing-art-edge-mark { fill: currentColor; stroke: none; }
+.landing-art-card .landing-art-line {
+    fill: currentColor;
+    stroke: none;
+    opacity: .35;
+}
+.landing-art-card .landing-art-line.is-strong { opacity: .65; }
+.landing-art-edges path {
+    fill: none;
+    stroke: var(--border-strong);
+    stroke-width: 2.5;
+}
+
+@keyframes landing-art-in {
+    from { opacity: 0; transform: scale(1.03); }
+    to   { opacity: .85; transform: none; }
+}
+
+/*
+ * The modal, and the scrim it sits on.
+ *
+ * Fixed rather than in the flow: the app is behind it now, and a scrolling
+ * landing page that took the canvas with it would read as one long document.
+ * It still scrolls as a page — this is the one screen taller than the window on
+ * a laptop — but the scroll belongs to the scrim, so nothing behind moves.
+ */
+.landing {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Fallback first, and deliberately near-solid: with no backdrop-filter the
+       card's text would land on a busy canvas. Legibility is not the thing to
+       spend on a blur that may not arrive. */
+    background: color-mix(in srgb, var(--scrim-ink) 70%, var(--bg));
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px 64px;
+    animation: landing-in var(--dur-base) var(--ease) both;
+}
+
+/*
+ * With a blur to lean on, the scrim can get out of the way.
+ *
+ * It was `--bg` at 60% under a 16px blur, which is a fogged pane: the app
+ * behind stopped being a header, a rail and a canvas and became a wash, so the
+ * card read as the whole page. 3px keeps the header and the graph behind
+ * *identifiable* — past about 4px the node cards stop being cards.
+ *
+ * The dimming is ink, not more `--bg`. A wash of the page's own background at
+ * 60-odd percent is the same pale grey as everything else in light theme: it
+ * hides the graph without ever making the card the brightest thing on screen,
+ * which is the only job a scrim has. A dark tint at 34% pushes the whole
+ * background down a stop in both themes and leaves the opaque `--panel` card
+ * sitting clearly on top, with `saturate(.85)` taking the last of the pull out
+ * of the kind colours behind.
+ */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .landing {
+        background: color-mix(in srgb, var(--scrim-ink) 55%, transparent);
+        backdrop-filter: blur(8px) saturate(.7);
+        -webkit-backdrop-filter: blur(8px) saturate(.7);
+    }
+}
+
+@keyframes landing-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes landing-card-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* The blanket rule further up already flattens durations; these two are the
+   ones that also *move*, so they are dropped outright rather than run in 1ms. */
+@media (prefers-reduced-motion: reduce) {
+    .landing, .landing-card, .landing-art { animation: none !important; }
+}
+
+.landing-card {
+    animation: landing-card-in var(--dur-base) var(--ease-spring) both;
+}
+
+/* No focus ring on the card itself: focus is moved there on mount so the
+   dialog is announced from its title, and a ring around the whole card would
+   read as something the reader had selected. The controls inside keep theirs. */
+.landing-card:focus { outline: none; }
+
+.landing-card {
+    width: 100%;
+    max-width: 860px;
+    align-self: flex-start;
+    padding: 36px 40px 32px;
+    border-radius: var(--r-lg);
+    border: 1px solid var(--border);
+    background: var(--panel);
+    box-shadow: var(--sh-3);
+}
+
+/* Centred, and the only centred text in the app. The head is the one block
+   with no neighbour to align to — everything under it is a grid or a row. */
+.landing-head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+    margin-bottom: 28px;
+}
+
+.landing-title {
+    margin: 0;
+    font-size: var(--fs-display);
+    font-weight: 700;
+    letter-spacing: -.02em;
+    color: var(--text);
+}
+
+/* Measure-capped rather than full-width: at 860px a two-line sentence becomes
+   a one-line banner that the eye skims instead of reads. */
+.landing-sub {
+    margin: 0;
+    max-width: 56ch;
+    color: var(--text-2);
+    font-size: var(--fs-h3);
+    line-height: 1.6;
+}
+
+.landing-points {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 28px;
+    margin: 0 0 22px;
+    padding: 0;
+    list-style: none;
+}
+
+/* No card, no border, no tint. These are four claims about what the tool does,
+   and boxing them would make them compete with the four slots below, which are
+   the things you are actually meant to touch. */
+.landing-point {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    color: var(--muted);
+}
+.landing-point > svg { flex: none; margin-top: 2px; color: var(--accent); }
+
+.landing-point-title {
+    color: var(--text);
+    font-size: var(--fs-body);
+    font-weight: 600;
+}
+.landing-point-body {
+    color: var(--muted);
+    font-size: var(--fs-sm);
+    line-height: 1.5;
+}
+
+/* The one promise worth making loudly enough to be believed, so it gets the
+   accent tint — a grey footnote saying "nothing is uploaded" reads as legal
+   boilerplate, which is the opposite of reassuring. */
+.landing-privacy {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 24px;
+    padding: 10px 14px;
+    border-radius: var(--r-md);
+    border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+    background: var(--accent-soft);
+    color: var(--text-2);
+    font-size: var(--fs-sm);
+    line-height: 1.5;
+}
+.landing-privacy > svg { flex: none; color: var(--accent); }
+
+.landing-slots {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 22px;
+}
+
+/* One column before the slots get narrow enough that a filename wraps to three
+   lines — a status line that reflows on every upload is worse than a taller
+   page. The same breakpoint collapses the claims above, so the whole card
+   changes shape once rather than twice. */
+@media (max-width: 700px) {
+    .landing-slots,
+    .landing-points { grid-template-columns: minmax(0, 1fr); }
+    .landing-card { padding: 28px 20px 24px; }
+}
+
+/*
+ * A slot says its state on its left rule and nowhere else.
+ *
+ * Filling in a background or colouring the label would make four filled slots
+ * into a wall of green, which is a celebration of the part that was easy. The
+ * rule is enough to scan for what is still empty, and quiet enough that the
+ * Build button stays the loudest thing on the card.
+ */
+.slot {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--panel);
+    transition: border-color var(--dur-base) var(--ease),
+                background var(--dur-fast) var(--ease);
+}
+.slot[data-state="ok"] { border-left-color: var(--ok); }
+.slot[data-state="bad"] { border-left-color: var(--bad); }
+.slot:hover { background: var(--panel-2); }
+
+/* Dashed only while a file is over it: a dashed border at rest is the universal
+   sign of a drop zone, and these are buttons first — most people click. */
+.slot.is-over {
+    border: 1px dashed var(--accent);
+    border-left: 3px dashed var(--accent);
+    background: var(--accent-soft);
+}
+
+.slot-hit {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+    padding: 12px 14px 6px;
+}
+.slot-hit:disabled { cursor: default; }
+.slot-hit:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    border-radius: var(--r-md);
+}
+
+.slot-icon { flex: none; display: grid; place-items: center; color: var(--muted); }
+.slot-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.slot-name { color: var(--text); font-size: var(--fs-body); font-weight: 600; }
+.slot-what { color: var(--muted); font-size: var(--fs-sm); }
+.slot-mark { flex: none; display: grid; place-items: center; }
+
+/*
+ * Always in the flow, empty or not.
+ *
+ * `min-height` rather than a conditional line: the slots are a grid, so a slot
+ * that grows when filled pushes its neighbour down under the cursor that just
+ * filled it — the reader's next target moves as a result of their last click.
+ */
+.slot-status {
+    min-height: calc(var(--fs-sm) * 1.5);
+    padding: 0 14px 11px;
+    font-size: var(--fs-sm);
+    line-height: 1.5;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}
+.slot-status[data-state="ok"] { color: var(--text-2); }
+.slot-status[data-state="bad"] { color: var(--bad); }
+
+.landing-go {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+}
+
+/* The single action on the page, and the only accent-filled control in the
+   product — there is nothing else here it could be confused with. */
+.landing-build {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 20px;
+    border-radius: var(--r-md);
+    background: var(--accent);
+    color: var(--panel);
+    font-size: var(--fs-h3);
+    font-weight: 650;
+    box-shadow: var(--sh-2);
+    transition: filter var(--dur-fast) var(--ease),
+                box-shadow var(--dur-fast) var(--ease);
+}
+.landing-build:hover:not(:disabled) { filter: brightness(1.08); box-shadow: var(--sh-3); }
+.landing-build:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Inert, not illegible. Fading the button to 40% would take the label with it,
+   and the label is the thing that tells you what the four slots are for. So the
+   fill is dropped to a tint and the text stays fully readable. */
+.landing-build:disabled {
+    cursor: default;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text-2);
+    box-shadow: none;
+}
+
+/* Next to the accent button but not competing with it: a bordered, unfilled
+   control at body size. Someone who brought their own files should be able to
+   ignore it without having to read it. */
+.landing-sample {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--panel-2);
+    color: var(--text-2);
+    font-size: var(--fs-sm);
+    font-weight: 550;
+    transition: color var(--dur-fast) var(--ease),
+                border-color var(--dur-fast) var(--ease);
+}
+.landing-sample:hover:not(:disabled) { color: var(--text); border-color: var(--accent); }
+.landing-sample:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.landing-sample:disabled { cursor: default; color: var(--muted); }
+
+.landing-note { color: var(--muted); font-size: var(--fs-sm); }
+
+/* Pushed to the far end and left grey: the runtime download is progress the
+   reader did not ask for, so it reports itself without taking a position in
+   the reading order next to the button. */
+.landing-runtime {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    font-size: var(--fs-sm);
+}
+.landing-runtime[data-ready] { color: var(--ok); }
+
+.landing-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 18px;
+    padding: 12px 14px;
+    border-radius: var(--r-md);
+    border: 1px solid color-mix(in srgb, var(--bad) 40%, transparent);
+    background: color-mix(in srgb, var(--bad) 10%, transparent);
+    color: var(--text);
+    font-size: var(--fs-body);
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+.landing-error > svg { flex: none; margin-top: 2px; color: var(--bad); }
+
+/* Capped and scrolling rather than growing: a build emits dozens of lines, and
+   a log that pushes the button it was started from off the screen leaves the
+   reader with no way back to where they were. */
+.landing-log {
+    max-height: 180px;
+    overflow: auto;
+    margin: 16px 0 0;
+    padding: 12px 14px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--text-2);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}

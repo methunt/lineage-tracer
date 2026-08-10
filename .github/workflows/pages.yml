@@ -1,0 +1,77 @@
+# Builds the client-side web app and publishes it to GitHub Pages.
+#
+# One-time setup: Settings → Pages → Build and deployment → Source must be set
+# to "GitHub Actions". Without it this workflow builds happily and deploys
+# nowhere.
+#
+# The app is served from the repository subpath (https://<owner>.github.io/<repo>/),
+# which is why the Vite `web` build uses `base: './'` — every asset, the worker,
+# and the service worker resolve relative to the page rather than to the domain
+# root.
+#
+# Action versions are pinned to major tags. Floating to a moving target would
+# mean a deploy that worked yesterday failing today for reasons that have
+# nothing to do with this repository.
+
+name: Deploy web app to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deploy matters — the newest. An in-flight run for an older commit is
+# cancelled rather than allowed to land after the commit that superseded it.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            bridge/package-lock.json
+            bridge/ui/package-lock.json
+
+      # `ci` rather than `install`: the lockfiles are the build, and a resolved
+      # version drifting between local and CI is the one difference that would
+      # show up only in the deployed bundle.
+      - name: Install bridge dependencies
+        working-directory: bridge
+        run: npm ci
+
+      - name: Install UI dependencies
+        working-directory: bridge/ui
+        run: npm ci
+
+      - name: Build web app
+        working-directory: bridge
+        run: npm run build:web
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: bridge/ui/dist-web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

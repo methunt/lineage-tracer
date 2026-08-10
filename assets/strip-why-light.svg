@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 291"
+     width="1200" height="291" role="img" aria-label="No setup, nothing leaves the tab, the formats you already have">
+  <style>
+    .rise  { animation: rise .55s cubic-bezier(.2,.7,.3,1) both; }
+    @keyframes rise { from { transform: translateY(9px) } to { transform: translateY(0) } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important } }</style>
+
+  <g class="rise" style="animation-delay:0.15s">
+    <rect x="0" y="0" width="386" height="291" rx="14" fill="#F6F8FA" stroke="#D0D7DE"/>
+    <rect x="0" y="0" width="386" height="5" rx="2.5" fill="#b45309"/>
+    <circle cx="50" cy="62" r="26" fill="#b45309" fill-opacity="0.14"/>
+    <text x="50" y="72" text-anchor="middle" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+          font-size="27">⚡</text>
+    <text x="28" y="118" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="23" font-weight="700"
+          fill="#1F2328" letter-spacing="-0.4">No setup, no waiting</text>
+    <text x="28" y="150" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="18"
+          fill="#656D76">Open the page, drop in your files, press</text>
+    <text x="28" y="177" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="18"
+          fill="#656D76">Build lineage. Nothing to install, nothing</text>
+    <text x="28" y="204" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="18"
+          fill="#656D76">to provision, nothing to wait for.</text>
+    <rect x="28" y="240" width="330" height="1" fill="#D0D7DE"/>
+    <text x="28" y="261" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="17" font-weight="700"
+          fill="#b45309" letter-spacing="0.3">0 installs  ·  0 servers</text>
+  </g>
+  <g class="rise" style="animation-delay:0.27s">
+    <rect x="406" y="0" width="386" height="291" rx="14" fill="#F6F8FA" stroke="#D0D7DE"/>
+    <rect x="406" y="0" width="386" height="5" rx="2.5" fill="#047857"/>
+    <circle cx="456" cy="62" r="26" fill="#047857" fill-opacity="0.14"/>
+    <text x="456" y="72" text-anchor="middle" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+          font-size="27">🔒</text>
+    <text x="434" y="118" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="23" font-weight="700"
+          fill="#1F2328" letter-spacing="-0.4">Nothing leaves the tab</text>
+    <text x="434" y="150" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="18"
+          fill="#656D76">No API, no upload path, no telemetry, no</text>
+    <text x="434" y="177" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="18"
+          fill="#656D76">account, no stored state. Your files are</text>
+    <text x="434" y="204" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="18"
+          fill="#656D76">read where they already are.</text>
+    <rect x="434" y="240" width="330" height="1" fill="#D0D7DE"/>
+    <text x="434" y="261" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="17" font-weight="700"
+          fill="#047857" letter-spacing="0.3">0 uploads  ·  0 accounts</text>
+  </g>
+  <g class="rise" style="animation-delay:0.39s">
+    <rect x="812" y="0" width="386" height="291" rx="14" fill="#F6F8FA" stroke="#D0D7DE"/>
+    <rect x="812" y="0" width="386" height="5" rx="2.5" fill="#7c3aed"/>
+    <circle cx="862" cy="62" r="26" fill="#7c3aed" fill-opacity="0.14"/>
+    <text x="862" y="72" text-anchor="middle" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+          font-size="27">🔁</text>
+    <text x="840" y="118" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="23" font-weight="700"
+          fill="#1F2328" letter-spacing="-0.4">The formats you already have</text>
+    <text x="840" y="150" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="18"
+          fill="#656D76">dbt manifest.json and catalog.json, a</text>
+    <text x="840" y="177" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="18"
+          fill="#656D76">mapping workbook as .xlsx or .csv, and</text>
+    <text x="840" y="204" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="18"
+          fill="#656D76">your PBIP project folder.</text>
+    <rect x="840" y="240" width="330" height="1" fill="#D0D7DE"/>
+    <text x="840" y="261" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="17" font-weight="700"
+          fill="#7c3aed" letter-spacing="0.3">4 inputs  ·  all required</text>
+  </g>
+</svg>

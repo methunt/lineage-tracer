@@ -1,0 +1,5 @@
+From Database,From Schema,From Table,From Column,To Table,To Column
+master,dbo,orders,order_id,Sales,OrderID
+master,dbo,orders,customer_id,Sales,CustomerID
+master,dbo,customers,customer_id,Customer,CustomerID
+master,dbo,customers,customer_name,Customer,Customer Name

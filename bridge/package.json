@@ -1,0 +1,32 @@
+{
+  "name": "lineage-bridge",
+  "version": "0.1.0",
+  "description": "End-to-end column lineage from a dbt source to the Power BI visual that renders it.",
+  "license": "MIT",
+  "private": true,
+  "bin": {
+    "lineage-bridge": "src/cli.js"
+  },
+  "scripts": {
+    "graph": "node src/cli.js graph",
+    "build:viewer": "npm --prefix ui install --no-audit --no-fund && npm --prefix ui run build && node scripts/stage-viewer.mjs",
+    "test": "node test/run.js",
+    "dev": "npm --prefix ui run dev",
+    "dev:web": "npm --prefix ui run dev -- --mode web",
+    "build:web": "node scripts/pack-python.mjs && npm run build:viewer && npm --prefix ui run build -- --mode web",
+    "dev:data": "node src/cli.js graph --out ui/dev-data.json",
+    "test:browser": "node test/browser.js",
+    "test:web": "node test/web.js",
+    "test:web:dev": "node test/web.js --dev"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.1",
+    "playwright": "^1.62.1"
+  }
+}

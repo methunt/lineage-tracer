@@ -1,0 +1,25 @@
+# Retained for provenance only — this vendored copy is never built or installed.
+# Both callers put src/ on sys.path directly (bridge/src/build.js for the CLI,
+# bridge/scripts/pack-python.mjs -> Pyodide for the browser), so nothing here is
+# read by a packaging tool. See README.md.
+#
+# Trimmed from upstream so it does not describe things this copy no longer has:
+#   - "click" dependency          (only upstream's CLI used it; the CLI is not vendored)
+#   - [project.scripts] colibri   (points at dbt_colibri.cli.cli, which is not vendored)
+#   - [build-system] / [tool.setuptools] / [dependency-groups] / [[tool.uv.index]]
+#                                 (build, test and publish config for a package we do not build)
+#   - readme = "README.md"        (upstream's README is not vendored; ours describes the fork)
+# sqlglot is kept because it is a real runtime import of the vendored modules.
+
+[project]
+name = "dbt-colibri"
+version = "0.3.6"
+description = "Vendored subset of dbt-colibri: sqlglot-based dbt column lineage extraction"
+authors = [
+    { name="bned" }
+]
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = [
+    "sqlglot[c]>=30.0.0",
+]

@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 372"
+     width="1200" height="372" role="img"
+     aria-label="Data flow: dbt catalog and manifest into a Python column-lineage extractor running in the browser, a Power BI project folder into JavaScript PBIP parsers, both plus a mapping workbook into the join at the warehouse boundary, producing one graph with lineage, impact, page layout, diagnostics and an HTML export.">
+  <style>
+    /* Entrances move, never fade: a renderer that drops the CSS must still
+       show a fully legible diagram. Only the dataflow dashes loop. */
+    .rise { animation: rise .5s cubic-bezier(.2,.7,.3,1) both; }
+    @keyframes rise { from { transform: translateY(8px) } to { transform: translateY(0) } }
+    .flow { animation: march 1.6s linear infinite; }
+    @keyframes march { from { stroke-dashoffset: 28 } to { stroke-dashoffset: 0 } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important } }
+  </style>
+  <!-- No background rect: GitHub has four surfaces and any colour painted
+       here is wrong on at least one of them. -->
+  <path d="M260 68C295.0 68 295.0 70 330 70" fill="none" stroke="#0f766e" stroke-width="2" stroke-opacity="0.75" stroke-dasharray="7 7" class="flow" style="animation-delay:0.00s"/>
+  <path d="M260 138C295.0 138 295.0 94 330 94" fill="none" stroke="#4f46e5" stroke-width="2" stroke-opacity="0.75" stroke-dasharray="7 7" class="flow" style="animation-delay:0.35s"/>
+  <path d="M260 278C295.0 278 295.0 274 330 274" fill="none" stroke="#7c3aed" stroke-width="2" stroke-opacity="0.75" stroke-dasharray="7 7" class="flow" style="animation-delay:0.70s"/>
+  <path d="M260 208C462.0 208 462.0 168 664 168" fill="none" stroke="#b45309" stroke-width="2" stroke-opacity="0.75" stroke-dasharray="7 7" class="flow" style="animation-delay:1.05s"/>
+  <path d="M598 82C631.0 82 631.0 140 664 140" fill="none" stroke="#4f46e5" stroke-width="2" stroke-opacity="0.75" stroke-dasharray="7 7" class="flow" style="animation-delay:0.50s"/>
+  <path d="M598 274C631.0 274 631.0 210 664 210" fill="none" stroke="#7c3aed" stroke-width="2" stroke-opacity="0.75" stroke-dasharray="7 7" class="flow" style="animation-delay:0.85s"/>
+  <path d="M900 178C924 178 922 178 946 178" fill="none" stroke="#047857" stroke-width="2" stroke-opacity="0.75" stroke-dasharray="7 7" class="flow" style="animation-delay:1.20s"/>
+  <g class="rise">
+  <rect x="24" y="40" width="236" height="56" rx="10" fill="#F6F8FA" stroke="#D0D7DE"/>
+  <rect x="24" y="40" width="4" height="56" rx="2" fill="#0f766e"/>
+  <text x="42" y="67" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="16.5" font-weight="700" fill="#1F2328">catalog.json</text>
+  <text x="42" y="91" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#656D76">dbt column types + schema</text>
+</g>
+<g class="rise">
+  <rect x="24" y="110" width="236" height="56" rx="10" fill="#F6F8FA" stroke="#D0D7DE"/>
+  <rect x="24" y="110" width="4" height="56" rx="2" fill="#4f46e5"/>
+  <text x="42" y="137" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="16.5" font-weight="700" fill="#1F2328">manifest.json</text>
+  <text x="42" y="161" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#656D76">compiled SQL — run dbt compile</text>
+</g>
+<g class="rise">
+  <rect x="24" y="180" width="236" height="56" rx="10" fill="#F6F8FA" stroke="#D0D7DE"/>
+  <rect x="24" y="180" width="4" height="56" rx="2" fill="#b45309"/>
+  <text x="42" y="207" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="16.5" font-weight="700" fill="#1F2328">mapping.xlsx / .csv</text>
+  <text x="42" y="231" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#656D76">links that cannot be derived</text>
+</g>
+<g class="rise">
+  <rect x="24" y="250" width="236" height="56" rx="10" fill="#F6F8FA" stroke="#D0D7DE"/>
+  <rect x="24" y="250" width="4" height="56" rx="2" fill="#7c3aed"/>
+  <text x="42" y="277" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="16.5" font-weight="700" fill="#1F2328">Power BI project folder</text>
+  <text x="42" y="301" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#656D76">.Report + .SemanticModel</text>
+</g>
+<g class="rise">
+  <rect x="330" y="34" width="268" height="96" rx="10" fill="#F6F8FA" stroke="#D0D7DE"/>
+  <rect x="330" y="34" width="4" height="96" rx="2" fill="#4f46e5"/>
+  <text x="348" y="61" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="17.5" font-weight="700" fill="#1F2328">Python, in your browser</text>
+  <text x="348" y="85" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#656D76">dbt-colibri column lineage</text>
+  <text x="348" y="106" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#656D76">on Pyodide + a vendored sqlglot</text>
+</g>
+<g class="rise">
+  <rect x="330" y="226" width="268" height="96" rx="10" fill="#F6F8FA" stroke="#D0D7DE"/>
+  <rect x="330" y="226" width="4" height="96" rx="2" fill="#7c3aed"/>
+  <text x="348" y="253" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="17.5" font-weight="700" fill="#1F2328">JavaScript, in your browser</text>
+  <text x="348" y="277" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#656D76">PBIP parsers: TMDL, DAX, M, PBIR</text>
+  <text x="348" y="298" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#656D76">plus M source-function inlining</text>
+</g>
+<g class="rise">
+  <rect x="664" y="96" width="236" height="164" rx="10" fill="#F6F8FA" stroke="#D0D7DE"/>
+  <rect x="664" y="96" width="4" height="164" rx="2" fill="#047857"/>
+  <text x="682" y="123" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="17.5" font-weight="700" fill="#1F2328">The join</text>
+  <text x="682" y="147" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#656D76">warehouse relation read</text>
+  <text x="682" y="168" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#656D76">back out of the M query,</text>
+  <text x="682" y="189" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#656D76">matched against dbt —</text>
+  <text x="682" y="210" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#656D76">your mapping rows win</text>
+</g>
+<g class="rise">
+  <rect x="946" y="60" width="230" height="236" rx="10" fill="#F6F8FA" stroke="#D0D7DE"/>
+  <rect x="946" y="60" width="4" height="236" rx="2" fill="#be123c"/>
+  <text x="964" y="87" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="17.5" font-weight="700" fill="#1F2328">One graph</text>
+  <text x="964" y="111" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#656D76">Lineage canvas</text>
+  <text x="964" y="132" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#656D76">Impact analysis</text>
+  <text x="964" y="153" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#656D76">Page layout</text>
+  <text x="964" y="174" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#656D76">Diagnostics</text>
+  <text x="964" y="195" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#656D76"></text>
+  <text x="964" y="216" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#656D76">Export → one .html file</text>
+</g>
+  <text x="24" y="358" font-family="ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',monospace" font-size="15" fill="#656D76">Nothing leaves the tab: no server, no API, no upload. The runtime is fetched once, then served from cache.</text>
+</svg>

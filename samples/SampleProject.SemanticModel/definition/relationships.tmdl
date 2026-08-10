@@ -1,0 +1,25 @@
+relationship 0a1b2c3d
+	fromColumn: Sales.ProductKey
+	toColumn: Product.ProductID
+	fromCardinality: many
+	toCardinality: one
+
+relationship 1a2b3c4d
+	fromColumn: Sales.CustomerID
+	toColumn: Customer.CustomerID
+	fromCardinality: many
+	toCardinality: one
+
+relationship 2a3b4c5d
+	fromColumn: Sales.OrderDate
+	toColumn: 'Date'.Date
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: bothDirections
+
+relationship 3a4b5c6d
+	fromColumn: Sales.ShipDate
+	toColumn: 'Date'.Date
+	fromCardinality: many
+	toCardinality: one
+	isActive: false

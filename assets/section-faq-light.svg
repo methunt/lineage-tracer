@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 138"
+     width="1200" height="138" role="img" aria-label="Questions people ask first">
+  <style>
+    .rise  { animation: rise .55s cubic-bezier(.2,.7,.3,1) both; }
+    @keyframes rise { from { transform: translateY(9px) } to { transform: translateY(0) } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important } }</style>
+  <defs>
+    <linearGradient id="w" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4f46e5" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#4f46e5" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="138" rx="12" fill="#F6F8FA"/>
+  <rect width="1200" height="138" rx="12" fill="url(#w)"/>
+  <rect width="6" height="138" rx="3" fill="#4f46e5"/>
+  <g class="rise">
+  <text x="40" y="42" font-family="ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',monospace" font-size="17" font-weight="700"
+        letter-spacing="1.6" fill="#4f46e5">FAQ</text>
+  <text x="40" y="78" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="29"
+        font-weight="700" fill="#1F2328" letter-spacing="-0.4">Questions people ask first</text>
+  <text x="40" y="108" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="17.5"
+        fill="#656D76">What it needs, what it does with it, what it cannot do, and what happens to your files.</text>
+  </g>
+</svg>

@@ -1,0 +1,8 @@
+*.log
+Input/
+node_modules/
+__pycache__/
+*.pyc
+~$*
+dist/
+dist-web/

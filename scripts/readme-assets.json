@@ -1,0 +1,173 @@
+{
+  "out_dir": "../assets",
+  "palette": {
+    "light": {
+      "primary": "#4f46e5",
+      "good": "#047857",
+      "warn": "#b45309",
+      "bad": "#be123c",
+      "violet": "#7c3aed",
+      "cyan": "#0f766e",
+      "glow": "#4f46e5"
+    },
+    "dark": {
+      "primary": "#8b9dff",
+      "good": "#34d399",
+      "warn": "#fbbf24",
+      "bad": "#fb7185",
+      "violet": "#c4b5fd",
+      "cyan": "#2dd4bf",
+      "glow": "#8b9dff"
+    }
+  },
+  "hero": {
+    "title": "Lineage Tracer",
+    "subtitle": "Trace a column from the dbt model that builds it to the Power BI visual that renders it — through Power Query renames, measures and calculation groups.",
+    "tiles": [],
+    "badges": [
+      "dbt",
+      "Power BI  ·  PBIP",
+      "runs in the browser",
+      "no account",
+      "MIT"
+    ],
+    "eyebrow": "dbt  ⇄  Power BI",
+    "accent": "primary"
+  },
+  "banners": [
+    {
+      "name": "section-inputs",
+      "eyebrow": "Part 1",
+      "title": "The four files it needs",
+      "body": "manifest.json, catalog.json, a mapping workbook and the PBIP project folder. All four are required — Build lineage stays disabled until every slot is filled.",
+      "accent": "primary"
+    },
+    {
+      "name": "section-mapping",
+      "eyebrow": "Part 2",
+      "title": "The mapping workbook",
+      "accent": "warn",
+      "body": "The one input no parsing can replace. Every declared link between a dbt column and a semantic model column lives here — renames, native SQL sources, an intervening view. Required, always."
+    },
+    {
+      "name": "section-lineage",
+      "eyebrow": "Part 3",
+      "title": "The lineage canvas",
+      "body": "One left-to-right DAG in swimlanes, from dbt sources through to Power BI visuals. Table nodes expand to their columns; selecting a column dims everything except its path.",
+      "accent": "cyan"
+    },
+    {
+      "name": "section-impact",
+      "eyebrow": "Part 4",
+      "title": "Impact analysis",
+      "body": "Blast radius is exact graph traversal and always shown with raw counts. A BROKEN chip appears only where the artifacts prove it. There is no heuristic CRITICAL.",
+      "accent": "bad"
+    },
+    {
+      "name": "section-layout",
+      "eyebrow": "Part 5",
+      "title": "Page layout",
+      "body": "The affected visuals as wireframe boxes, in place on the report pages they live on — a name tells you what to look for, a position tells you where to look.",
+      "accent": "violet"
+    },
+    {
+      "name": "section-diagnostics",
+      "eyebrow": "Part 6",
+      "title": "Diagnostics",
+      "body": "Eleven sections of everything that did not link, graded error, warning or info, each row linking back into the graph. This is the worklist your mapping rows come from.",
+      "accent": "warn"
+    },
+    {
+      "name": "section-reference",
+      "eyebrow": "Reference",
+      "title": "Gotchas, privacy and licences",
+      "body": "Everything below is reference — read it when you need it. What will bite you, what the tool deliberately does not protect against, and who owns the vendored code.",
+      "accent": "good"
+    },
+    {
+      "name": "section-start",
+      "eyebrow": "Start here",
+      "title": "Where to start",
+      "accent": "primary",
+      "body": "Four ways in, depending on what you came for — a graph out of it today, a tour of what it renders, why something did not link, or how it is built."
+    },
+    {
+      "name": "section-problem",
+      "eyebrow": "The problem",
+      "title": "The gap between two good tools",
+      "accent": "bad",
+      "body": "dbt and Power BI each have good lineage tools, and both stop at the warehouse boundary — the one place a column's story crosses systems. Today that gap is crossed by hand."
+    },
+    {
+      "name": "section-who",
+      "eyebrow": "Audience",
+      "title": "Who this is for",
+      "accent": "cyan",
+      "body": "Analytics engineers, BI developers, data platform leads and reviewers — four people who ask the same question from four different ends of the chain."
+    },
+    {
+      "name": "section-wired",
+      "eyebrow": "Architecture",
+      "title": "How it is wired",
+      "accent": "violet",
+      "body": "What parses what, where it runs, and which links are declared by you versus derived by the tool."
+    },
+    {
+      "name": "section-export",
+      "eyebrow": "Export",
+      "title": "One file you can email",
+      "accent": "good",
+      "body": "The same graph, canvas and panels with the data baked in. No server and no sidecar assets — double-click it and it opens."
+    },
+    {
+      "name": "section-why",
+      "eyebrow": "Comparison",
+      "title": "Why this tool",
+      "accent": "warn",
+      "body": "What it does that a dbt lineage graph and a Power BI lineage view cannot, side by side."
+    },
+    {
+      "name": "section-faq",
+      "eyebrow": "FAQ",
+      "title": "Questions people ask first",
+      "accent": "primary",
+      "body": "What it needs, what it does with it, what it cannot do, and what happens to your files."
+    }
+  ],
+  "cta": {
+    "name": "cta",
+    "label": "Open Lineage Tracer",
+    "sublabel": "runs in your browser  ·  no account  ·  nothing is uploaded",
+    "accent": "primary",
+    "accent2": "cyan"
+  },
+  "strips": [
+    {
+      "name": "strip-why",
+      "label": "No setup, nothing leaves the tab, the formats you already have",
+      "cards": [
+        {
+          "icon": "⚡",
+          "title": "No setup, no waiting",
+          "colour": "warn",
+          "body": "Open the page, drop in your files, press Build lineage. Nothing to install, nothing to provision, nothing to wait for.",
+          "stat": "0 installs  ·  0 servers"
+        },
+        {
+          "icon": "🔒",
+          "title": "Nothing leaves the tab",
+          "colour": "good",
+          "body": "No API, no upload path, no telemetry, no account, no stored state. Your files are read where they already are.",
+          "stat": "0 uploads  ·  0 accounts"
+        },
+        {
+          "icon": "🔁",
+          "title": "The formats you already have",
+          "colour": "violet",
+          "body": "dbt manifest.json and catalog.json, a mapping workbook as .xlsx or .csv, and your PBIP project folder.",
+          "stat": "4 inputs  ·  all required"
+        }
+      ]
+    }
+  ]
+}

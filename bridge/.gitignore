@@ -1,0 +1,12 @@
+*.log
+.work/
+THIRD-PARTY-NOTICES.txt
+graph.json
+node_modules/
+report.html
+ui/dev-data.json
+ui/dist/
+ui/node_modules/
+ui/public/viewer.html
+ui/dist-web/
+ui/public/py/python-sources.json
