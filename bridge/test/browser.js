@@ -280,10 +280,25 @@ async function buildSampleReport() {
     await page.waitForTimeout(1400);
 
     const shownAs = await page.locator('[data-testid="shown-as-row"]').allInnerTexts();
+    /*
+     * Three labels from two places: two typed into field wells, and one authored
+     * as a field parameter's caption. The reader needs all of them — fixing the
+     * two visuals and leaving the parameter fixes two charts out of three.
+     */
     check('the measure lists every label it is read under',
-        shownAs.length === 2
-        && shownAs.join(' ').includes('Grand Total') && shownAs.join(' ').includes('Revenue'),
+        shownAs.length === 3
+        && ['Grand Total', 'Revenue', 'Total Sales'].every(l => shownAs.join(' ').includes(l)),
         shownAs.map(r => r.replace(/\n/g, ' ')).join(' / '));
+    /*
+     * And says which is which. A caption is authored once and reaches every
+     * visual on the parameter; a rename stops at one visual. Told apart wrongly,
+     * a reader changes the caption expecting to move one chart and moves eight.
+     */
+    const sources = await page.locator('[data-testid="shown-as-source"]').allInnerTexts();
+    check('and says where each label is authored',
+        sources.filter(s => /parameter/.test(s)).length === 1
+        && sources.filter(s => /visual rename/.test(s)).length === 2,
+        sources.join(' / '));
 
     /*
      * And on the visual: the label beside the model's name, not instead of it.
@@ -1383,6 +1398,62 @@ async function buildSampleReport() {
     check('dbt cards carry a test count', badges.total > 0 && badges.tested > 0,
         `${badges.tested} of ${badges.total} tested`);
     check('Power BI cards do not', badges.onPbi === 0, `${badges.onPbi} pbi cards badged`);
+
+    /*
+     * A field parameter, from the search box to the panel.
+     *
+     * The whole point is that none of this is in the report file: the visual
+     * names one field, and the parameter's other rows are reachable only by a
+     * reader moving a slicer. So the checks are about what the tool *adds* — the
+     * list of what can be swapped in, the label a reader can search for, and the
+     * fact that the table is not an ordinary table of data.
+     */
+    await page.locator('header button[role="tab"]', { hasText: 'Lineage' }).click();
+    await page.waitForTimeout(700);
+    await page.keyboard.press('Control+k');
+    const clearForParam = page.locator('[data-testid="search-palette"] button', { hasText: /^clear$/ });
+    if (await clearForParam.count()) await clearForParam.click();
+    // The caption, not the field: a label authored in the model, which the
+    // measure behind it has never been called.
+    await page.locator('[data-testid="palette-input"]').fill('Total Sales');
+    await page.waitForTimeout(500);
+    const captionHit = page.locator('[data-testid="palette-result"]')
+        .filter({ has: page.locator('[data-testid="palette-aka"]') });
+    check('the palette finds a field by the label its parameter gives it',
+        (await captionHit.count()) === 1,
+        (await page.locator('[data-testid="palette-result"]').allInnerTexts()).join(' / '));
+    check('and the row still names the measure a change would break',
+        (await captionHit.first().innerText()).includes('Total Revenue'),
+        (await captionHit.first().innerText()).replace(/\n/g, ' '));
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(400);
+
+    await page.keyboard.press('Control+k');
+    const clearForTable = page.locator('[data-testid="search-palette"] button', { hasText: /^clear$/ });
+    if (await clearForTable.count()) await clearForTable.click();
+    await page.locator('[data-testid="palette-input"]').fill('Metric Chooser');
+    await page.waitForTimeout(500);
+    await page.locator('[data-testid="palette-result"]').first().click();
+    await page.waitForTimeout(1500);
+    // A table opens on Overview; the list sits beside the expression that states
+    // it, one tab across.
+    await page.locator('[data-testid="side-panel"] [role="tab"]', { hasText: 'Definition' }).click();
+    await page.waitForTimeout(600);
+
+    const swaps = await page.locator('[data-testid="swaps-row"]').allInnerTexts();
+    check('the panel lists every field the parameter can swap in',
+        swaps.length === 4, swaps.map(r => r.replace(/\n/g, ' ')).join(' / '));
+    check('each row names the label and the field behind it',
+        swaps.join(' ').includes('Total Sales') && swaps.join(' ').includes('Sales[UnitPrice]'),
+        swaps.map(r => r.replace(/\n/g, ' ')).join(' / '));
+    /* A row pointing at a field the model no longer has breaks the visual for
+       whoever picks it, and warns nobody at open time — so it is kept and
+       marked rather than quietly dropped from the list. */
+    check('a row pointing at nothing is shown as such, not dropped',
+        swaps.some(r => /not found/.test(r)),
+        swaps.map(r => r.replace(/\n/g, ' ')).join(' / '));
+    check('the table is marked as a parameter, not left looking like data',
+        /field parameter/i.test(await page.locator('[data-testid="side-panel"]').innerText()));
 
     /*
      * Escape is the rail's Reset on a key: back to the state the report opened
