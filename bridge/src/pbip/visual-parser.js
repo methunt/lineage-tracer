@@ -91,7 +91,8 @@ class VisualParser {
                 visualName,
                 visualType,
                 pageName,
-                projectionName: field.projectionName
+                projectionName: field.projectionName,
+                displayName: field.displayName || null
             });
         }
 
@@ -368,6 +369,45 @@ class VisualParser {
     }
 
     /**
+     * The name the author typed over a field *in this visual*, or null.
+     *
+     * Power BI writes `displayName` on a projection when the reader renames the
+     * field in the visual's own field well — the semantic model keeps the
+     * original, so the same measure can read "Label A" in one visual and
+     * "Label B" in the next. Only `displayName` is trusted: `nativeQueryRef` also
+     * changes on rename, but it changes for reasons nobody typed as well — a
+     * second reference to one column in a query gains a numeric suffix — and
+     * reporting that as a rename would put a fact on screen that no author
+     * asserted.
+     *
+     * Power BI also writes `displayName` when it equals the field name. That is
+     * not a rename, and listing it as one would bury the real ones.
+     */
+    _renameOf(proj, fieldName) {
+        const shown = typeof proj?.displayName === 'string' ? proj.displayName.trim() : '';
+        if (!shown) return null;
+        return shown.toLowerCase() === String(fieldName).trim().toLowerCase() ? null : shown;
+    }
+
+    /**
+     * Record one field reference, merging into any entry already collected.
+     *
+     * A field can be projected more than once in a single visual — the Values
+     * well and the sort definition name the same measure — and only one of those
+     * carries the rename. Merging rather than first-write-wins means the order
+     * the extractors run in cannot decide whether a rename is seen.
+     */
+    _record(fieldMap, key, entry, rename) {
+        const existing = fieldMap.get(key) || (fieldMap.set(key, entry), entry);
+        if (rename && !(existing.displayNames || []).includes(rename)) {
+            existing.displayNames = [...(existing.displayNames || []), rename];
+            // The first rename seen is the one a single-label surface shows.
+            existing.displayName = existing.displayNames[0];
+        }
+        return existing;
+    }
+
+    /**
      * Extract field from a projection object
      */
     _extractFieldFromProjection(proj, projectionName, fieldMap) {
@@ -375,46 +415,37 @@ class VisualParser {
             const entity = proj.field.Column.Expression?.SourceRef?.Entity;
             const property = proj.field.Column.Property;
             if (entity && property) {
-                const key = `column|${entity}|${property}`;
-                if (!fieldMap.has(key)) {
-                    fieldMap.set(key, {
-                        type: 'column',
-                        table: entity,
-                        column: property,
-                        name: property,
-                        projectionName
-                    });
-                }
+                this._record(fieldMap, `column|${entity}|${property}`, {
+                    type: 'column',
+                    table: entity,
+                    column: property,
+                    name: property,
+                    projectionName
+                }, this._renameOf(proj, property));
             }
         } else if (proj.field?.Measure) {
             const entity = proj.field.Measure.Expression?.SourceRef?.Entity;
             const property = proj.field.Measure.Property;
             if (entity && property) {
-                const key = `measure|${entity}|${property}`;
-                if (!fieldMap.has(key)) {
-                    fieldMap.set(key, {
-                        type: 'measure',
-                        table: entity,
-                        entity: entity,
-                        name: property,
-                        projectionName
-                    });
-                }
+                this._record(fieldMap, `measure|${entity}|${property}`, {
+                    type: 'measure',
+                    table: entity,
+                    entity: entity,
+                    name: property,
+                    projectionName
+                }, this._renameOf(proj, property));
             }
         } else if (proj.field?.Hierarchy) {
             const entity = proj.field.Hierarchy.Expression?.SourceRef?.Entity;
             const hierarchy = proj.field.Hierarchy.Hierarchy;
             if (entity && hierarchy) {
-                const key = `hierarchy|${entity}|${hierarchy}`;
-                if (!fieldMap.has(key)) {
-                    fieldMap.set(key, {
-                        type: 'hierarchy',
-                        table: entity,
-                        hierarchy: hierarchy,
-                        name: hierarchy,
-                        projectionName
-                    });
-                }
+                this._record(fieldMap, `hierarchy|${entity}|${hierarchy}`, {
+                    type: 'hierarchy',
+                    table: entity,
+                    hierarchy: hierarchy,
+                    name: hierarchy,
+                    projectionName
+                }, this._renameOf(proj, hierarchy));
             }
         }
     }
