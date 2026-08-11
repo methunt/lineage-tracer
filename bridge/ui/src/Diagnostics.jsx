@@ -19,7 +19,7 @@ import { IconSearch, IconWarn, IconCheck, IconChevronRight } from './icons';
 const SECTIONS = [
     {
         key: 'unresolvedMappingRows', title: 'Mapping rows that could not be resolved',
-        severity: 'error', hint: 'Fix these in the mapping workbook.',
+        severity: 'error', hint: 'Fix these in the mapping file.',
         cols: [['Row', r => r.row, { width: '5rem', mono: true }], ['Reason', r => r.reason]],
     },
     {

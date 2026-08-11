@@ -52,9 +52,9 @@
     <text x="840" y="150" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="18"
           fill="#8B949E">dbt manifest.json and catalog.json, a</text>
     <text x="840" y="177" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="18"
-          fill="#8B949E">mapping workbook as .xlsx or .csv, and</text>
+          fill="#8B949E">mapping file as .csv, and your PBIP</text>
     <text x="840" y="204" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="18"
-          fill="#8B949E">your PBIP project folder.</text>
+          fill="#8B949E">project folder.</text>
     <rect x="840" y="240" width="330" height="1" fill="#30363D"/>
     <text x="840" y="261" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="17" font-weight="700"
           fill="#c4b5fd" letter-spacing="0.3">4 inputs  ·  all required</text>

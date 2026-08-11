@@ -2,7 +2,7 @@
  * Join the dbt graph to the Power BI graph and compute impact.
  *
  * Precedence, per bridge/docs/ui-spec.md:
- *   1. Mapping workbook rows — the user's assertion, possibly across layers we
+ *   1. Mapping file rows — the user's assertion, possibly across layers we
  *      cannot see. Emitted with provenance "declared".
  *   2. Automatic relation matching — resolved from M navigation. "derived".
  *
@@ -255,7 +255,7 @@ function buildGraph({ dbtGraph, pbiGraph, pbip, mapping, layerOrder }) {
         }
     }
     /*
-     * Columns the workbook declares more than one source for.
+     * Columns the mapping file declares more than one source for.
      *
      * Legitimate — a column built from an `if` over two fields genuinely has
      * two sources, and both must keep working. It is also exactly what a typo

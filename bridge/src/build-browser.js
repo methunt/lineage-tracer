@@ -20,14 +20,13 @@ const { toReportData } = require('./report-data');
  * @param {object}   options.files        PBIP project as path -> text
  * @param {string}   options.rootName     the project folder's own name
  * @param {object}   options.dbtGraph     what dbt_extract.py returned
- * @param {ArrayBuffer|string} options.mappingData  the mapping workbook's bytes
+ * @param {ArrayBuffer|string} options.mappingData  the mapping file's bytes
  * @param {string}   options.mappingName  its filename, for error messages
- * @param {object}   options.ExcelJS      loaded on demand by the caller
  * @param {string[]} [options.layers]     explicit layer order
  * @param {function} [options.log]
  */
 async function buildInBrowser({
-    files, rootName, dbtGraph, mappingData, mappingName, ExcelJS, layers, log = () => {},
+    files, rootName, dbtGraph, mappingData, mappingName, layers, log = () => {},
 }) {
     log('Parsing PBIP project…');
     const parsed = extractPbipFromFiles(files, { rootName, warn: m => log(`  ! ${m}`) });
@@ -42,7 +41,7 @@ async function buildInBrowser({
         (dbtGraph.errors?.length ? `, ${dbtGraph.errors.length} parse errors` : ''));
 
     log('Reading mapping…');
-    const mapping = await readMappingFromBuffer(mappingData, mappingName, { ExcelJS });
+    const mapping = await readMappingFromBuffer(mappingData, mappingName);
     log(`  ${mapping.rows.length} valid rows, ${mapping.errors.length} invalid`);
 
     log('Merging…');

@@ -19,9 +19,6 @@
     "test:web": "node test/web.js",
     "test:web:dev": "node test/web.js --dev"
   },
-  "dependencies": {
-    "exceljs": "^4.4.0"
-  },
   "engines": {
     "node": ">=18"
   },

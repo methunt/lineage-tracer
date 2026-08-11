@@ -22,7 +22,45 @@ import {
     TrendingUp, Rows3, MessageSquare, Palette, Crosshair, RotateCcw,
     Loader2, Flame, LayoutDashboard,
     FileJson, FileSpreadsheet, FolderOpen, Lock, Upload, Download,
+    Star,
 } from 'lucide-react';
+
+/*
+ * Lucide dropped brand marks a few majors ago, so GitHub and LinkedIn are
+ * hand-traced from their public brand SVGs rather than composed from a
+ * generic glyph — a generic "link" icon would not read as either brand at a
+ * glance, which is the entire point of putting them in the footer.
+ */
+const GithubMark = props => (
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+        <path d="M12 .5C5.73.5.5 5.73.5 12c0 5.09 3.29 9.4 7.86 10.93.57.1.78-.25.78-.55
+            0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7
+            1.15.08 1.76 1.18 1.76 1.18 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.23-1.28-5.23-5.7
+            0-1.26.45-2.29 1.18-3.09-.12-.29-.51-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0c2.2-1.49
+            3.17-1.18 3.17-1.18.63 1.59.24 2.76.12 3.05.74.8 1.18 1.83 1.18 3.09 0 4.43-2.69 5.4-5.25 5.69.41.36.78
+            1.08.78 2.17 0 1.57-.01 2.83-.01 3.22 0 .3.2.66.79.55A10.53 10.53 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5Z" />
+    </svg>
+);
+/*
+ * Brand colour, not currentColor: LinkedIn's mark is a blue badge with a
+ * white glyph on it, not an outline — rendering it in the surrounding text
+ * colour makes it unrecognisable as the LinkedIn logo rather than just a
+ * muted version of it. The other icons here stay currentColor on purpose,
+ * so they sit quietly in whatever UI they're dropped into; this one is
+ * deliberately the odd one out because a footer credit link is exactly
+ * where "instantly recognisable as LinkedIn" matters more than "matches
+ * the theme".
+ */
+const LinkedinMark = ({ style, ...props }) => (
+    <svg viewBox="0 0 24 24" style={{ color: 'inherit', ...style }} {...props}>
+        <rect width="24" height="24" rx="5" fill="#0A66C2" />
+        <path fill="#fff" d="M7.12 8.66h2.9V17h-2.9V8.66Zm1.45-4.64a1.68 1.68 0 1 1 0 3.36 1.68 1.68 0 0 1 0-3.36ZM11.5
+            8.66h2.78v1.14h.04c.39-.73 1.33-1.5 2.74-1.5 2.93 0 3.47 1.93 3.47 4.43V17h-2.9v-3.75c0-.9-.02-2.05-1.25-2.05
+            -1.26 0-1.45.98-1.45 1.99V17h-2.9V8.66Z" />
+    </svg>
+);
+const Github = props => <GithubMark {...props} />;
+const Linkedin = props => <LinkedinMark {...props} />;
 
 /** Matches --icon-sm / --icon-md / --icon-lg in styles.css. */
 export const SIZE = { sm: 14, md: 18, lg: 22, xl: 26 };
@@ -100,6 +138,10 @@ export const IconLock = wrap(Lock);
 export const IconUpload = wrap(Upload);
 // The header's Export control: the graph on screen, saved as one file.
 export const IconDownload = wrap(Download);
+export const IconGithub = wrap(Github);
+export const IconLinkedin = wrap(Linkedin);
+export const IconStar = wrap(Star);
+export const IconExternalLink = wrap(ExternalLink);
 
 /** One glyph per node kind — the signal that keeps colour from being the only cue. */
 export const KIND_ICON = {

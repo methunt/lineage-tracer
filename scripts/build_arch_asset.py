@@ -81,7 +81,7 @@ def build() -> str:
     inputs = [
         (40, "__CYAN__", "catalog.json", ["dbt column types + schema"]),
         (110, "__PRIMARY__", "manifest.json", ["compiled SQL — run dbt compile"]),
-        (180, "__WARN__", "mapping.xlsx / .csv", ["links that cannot be derived"]),
+        (180, "__WARN__", "mapping.csv", ["links that cannot be derived"]),
         (250, "__VIOLET__", "Power BI project folder", [".Report + .SemanticModel"]),
     ]
     parts = []
@@ -127,7 +127,7 @@ def build() -> str:
 
     return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}"
      width="{W}" height="{H}" role="img"
-     aria-label="Data flow: dbt catalog and manifest into a Python column-lineage extractor running in the browser, a Power BI project folder into JavaScript PBIP parsers, both plus a mapping workbook into the join at the warehouse boundary, producing one graph with lineage, impact, page layout, diagnostics and an HTML export.">
+     aria-label="Data flow: dbt catalog and manifest into a Python column-lineage extractor running in the browser, a Power BI project folder into JavaScript PBIP parsers, both plus a mapping file into the join at the warehouse boundary, producing one graph with lineage, impact, page layout, diagnostics and an HTML export.">
   <style>
     /* Entrances move, never fade: a renderer that drops the CSS must still
        show a fully legible diagram. Only the dataflow dashes loop. */

@@ -232,7 +232,7 @@ function Provenance({ edges }) {
                         {declared.length > 0 && (
                             <div>
                                 <div className="label mb-1.5" style={{ color: 'var(--accent)' }}>
-                                    Mapped in the spreadsheet ({declared.length})
+                                    Mapped in the mapping file ({declared.length})
                                 </div>
                                 <div className="mono" style={{ lineHeight: 1.8 }}>
                                     {declared.map(pair).join(', ')}

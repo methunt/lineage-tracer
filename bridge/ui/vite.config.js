@@ -336,10 +336,10 @@ function viewer() {
  * The hosted app: ordinary chunked ESM, served from a static host.
  *
  * Everything the viewer build does to collapse itself into one file is wrong
- * here. The Pyodide runtime and ExcelJS are megabytes that most visits never
- * need on the first paint, and the whole point of a hosted build is that they
- * arrive as separate, cacheable requests — so no singlefile, no inlining, and
- * no IIFE, because a module worker needs real modules to import.
+ * here. The Pyodide runtime is megabytes that most visits never need on the
+ * first paint, and the whole point of a hosted build is that it arrives as a
+ * separate, cacheable request — so no singlefile, no inlining, and no IIFE,
+ * because a module worker needs real modules to import.
  *
  * `base: './'` so the build works from a project subpath on GitHub Pages
  * without the repository name being compiled in.
@@ -373,7 +373,7 @@ function webApp() {
              * with `Cannot read properties of undefined (reading '_container')`.
              * This one is scoped to `serve` so the two never meet: without
              * `apply`, it runs in builds as well, and two commonjs transformers
-             * claiming the same modules is what broke the ExcelJS build before.
+             * claiming the same modules is what broke the bridge build before.
              */
             {
                 ...devCommonjs({ filter: id => id.includes('bridge') && id.includes('/src/') }),
@@ -432,9 +432,6 @@ function webApp() {
                  * inside their read-from-disk entry points, which the browser
                  * build never calls — but a bare `require('fs')` still has to
                  * resolve or the build fails on a code path nobody runs.
-                 *
-                 * `exceljs` is deliberately absent from this list: it genuinely
-                 * runs in the browser and is loaded on demand by the build hook.
                  */
                 fs: path.resolve(HERE, 'src/web/node-stub.js'),
                 path: path.resolve(HERE, 'src/web/node-stub.js'),

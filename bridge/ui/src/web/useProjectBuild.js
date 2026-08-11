@@ -84,20 +84,16 @@ export function useProjectBuild() {
                 catalogText: slots.catalog.text,
             }, say);
 
-            // Both loaded here, on demand: ExcelJS is ~950 KB and the bridge
-            // modules are the whole parser set. Neither belongs in the bundle
-            // that renders the landing page.
+            // Loaded here, on demand: the bridge modules are the whole parser
+            // set and don't belong in the bundle that renders the landing page.
             //
-            // `.default || m` on both: these are CommonJS modules, and the two
-            // halves of the build interop with them differently. The bundler
-            // synthesises named exports, so a build gets `{ buildInBrowser }`
-            // directly; the dev server's converter puts `module.exports` on
-            // `default` and nothing else — where destructuring quietly yields
-            // undefined and fails one call later as "not a function".
-            const [bridge, ExcelJS] = await Promise.all([
-                import('../../../src/build-browser.js').then(m => m.default || m),
-                import('exceljs').then(m => m.default || m),
-            ]);
+            // `.default || m`: this is a CommonJS module, and the two halves of
+            // the build interop with it differently. The bundler synthesises
+            // named exports, so a build gets `{ buildInBrowser }` directly; the
+            // dev server's converter puts `module.exports` on `default` and
+            // nothing else — where destructuring quietly yields undefined and
+            // fails one call later as "not a function".
+            const bridge = await import('../../../src/build-browser.js').then(m => m.default || m);
             const { buildInBrowser, toReportData } = bridge;
 
             const graph = await buildInBrowser({
@@ -106,7 +102,6 @@ export function useProjectBuild() {
                 dbtGraph: dbt.graph,
                 mappingData: slots.mapping.data,
                 mappingName: slots.mapping.name,
-                ExcelJS,
                 log: say,
             });
 

@@ -42,7 +42,7 @@ graph options
   --manifest <file>     dbt target/manifest.json          [required]
   --catalog  <file>     dbt target/catalog.json           [required]
   --pbip     <dir>      PBIP project root                 [required]
-  --mapping  <file>     mapping workbook .xlsx or .csv    (optional)
+  --mapping  <file>     mapping .csv                      (optional)
   --out      <path>     output file  (default: graph.json)
   --layers   <list>     comma-separated layer order, e.g. base,staging,warehouse,analytics
   --colibri-repo <dir>  default: ../dbt-colibri
@@ -101,7 +101,7 @@ function report(graph) {
     if (s.issues) console.log(`  ! ${s.issues} issues — see the Diagnostics tab`);
     if (!s.crossLinks) {
         console.log('  ! nothing linked. Check that the manifest has compiled SQL and that the');
-        console.log('    warehouse relations match, or add rows to a mapping workbook.');
+        console.log('    warehouse relations match, or add rows to the mapping file.');
     }
 }
 

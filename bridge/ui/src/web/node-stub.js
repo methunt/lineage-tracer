@@ -3,7 +3,7 @@
  *
  * The bridge modules are shared with the CLI, and two of them (pbip-extract.js,
  * mapping.js) lazily `require('fs')` / `require('path')` inside functions that
- * only the CLI ever calls — reading a project off disk, resolving a workbook
+ * only the CLI ever calls — reading a project off disk, resolving a mapping file
  * path. The browser build reaches none of those paths, but the bundler still has
  * to resolve the require, so it resolves to this.
  *

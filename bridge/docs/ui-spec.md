@@ -300,7 +300,7 @@ A grouped, height-capped region between the tabs and the tab content:
   each may carry a rename and the rename is the point. `CustNo → Customer
   Number` is why a Power BI author cannot guess which dbt column breaks their
   table.
-- **Mapped in the spreadsheet (n)** — one comma-separated sentence. The reader
+- **Mapped in the mapping file (n)** — one comma-separated sentence. The reader
   wrote these, so they need no per-line scrutiny. Omitted entirely when empty.
 
 Both the provenance region and the tab content scroll independently, and

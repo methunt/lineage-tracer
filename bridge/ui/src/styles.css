@@ -943,6 +943,78 @@ table.dt td.mono { font-family: var(--font-mono); font-size: var(--fs-code); }
     background: var(--border);
 }
 
+/* Credit bar. A flex row in the layout, like the header, not a floating
+   overlay — see the comment in Footer.jsx for why. Its own accent tint
+   (rather than plain --panel) is what makes it read as a distinct strip
+   rather than more of the header repeated at the other end of the screen. */
+.app-footer {
+    flex: none;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 12px;
+    /* Back to the original 6px — the 10px bump was chasing the hover-pill
+       padding problem, but that belongs on `.app-footer-link` itself
+       (below), not on the bar as a whole. */
+    padding: 6px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--accent-soft);
+    font-size: var(--fs-sm);
+    color: var(--text);
+    white-space: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.app-footer::-webkit-scrollbar { display: none; }
+
+.app-footer-links {
+    display: flex;
+    align-items: center;
+    justify-self: center;
+    /* The gap is the actual whitespace between two hover pills — the
+       negative-margin trick previously here to "enlarge the pill without
+       moving anything" ate straight into this gap and let adjacent pills
+       touch. A plain gap, sized larger than the pill's own padding, is what
+       keeps them apart. */
+    gap: 8px;
+}
+
+.app-footer-other { justify-self: end; }
+
+.app-footer-link {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    /* Even on all sides: the hover pill is what the reader actually sees the
+       shape of, and 3px/8px read lopsided — tall text with barely any air
+       above or below it, next to generous side margins. */
+    padding: 4px 8px;
+    border-radius: 8px;
+    color: var(--text);
+    transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.app-footer-link:hover {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: var(--accent);
+}
+
+/* Same colour as the links beside it, not --muted — it was reading as a
+   greyed-out afterthought when everything else on the bar was full-text. */
+.app-footer-credit { padding: 4px 2px; justify-self: start; color: var(--text); }
+
+.app-footer-sep {
+    width: 1px;
+    height: 14px;
+    flex: none;
+    background: var(--border);
+}
+
+/* On narrow viewports the strip keeps its icons and drops the prose, so a
+   credit line never forces the page to scroll sideways to read it. */
+@media (max-width: 720px) {
+    .app-footer-label { display: none; }
+}
+
 /* ==========================================================================
  * The landing page (web build only).
  *

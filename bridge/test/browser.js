@@ -577,8 +577,8 @@ async function buildSampleReport() {
     check('crossing provenance rendered', !!prov, prov ? prov.text.split('\n')[0] : 'none');
     check('crossing provenance capped at half the panel',
         !!prov && prov.ratio <= 0.55, prov ? `${(prov.ratio * 100).toFixed(0)}%` : '');
-    check('declared links grouped as a spreadsheet sentence',
-        !!prov && /Mapped in the spreadsheet/i.test(prov.text));
+    check('declared links grouped as a mapping-file sentence',
+        !!prov && /Mapped in the mapping file/i.test(prov.text));
 
     // Nodes must be movable, and the reset must put them back.
     const nodeBox = await page.locator('.react-flow__node').first().boundingBox();

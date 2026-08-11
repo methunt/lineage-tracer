@@ -39,13 +39,13 @@
       "name": "section-inputs",
       "eyebrow": "Part 1",
       "title": "The four files it needs",
-      "body": "manifest.json, catalog.json, a mapping workbook and the PBIP project folder. All four are required — Build lineage stays disabled until every slot is filled.",
+      "body": "manifest.json, catalog.json, a mapping file and the PBIP project folder. All four are required — Build lineage stays disabled until every slot is filled.",
       "accent": "primary"
     },
     {
       "name": "section-mapping",
       "eyebrow": "Part 2",
-      "title": "The mapping workbook",
+      "title": "The mapping file",
       "accent": "warn",
       "body": "The one input no parsing can replace. Every declared link between a dbt column and a semantic model column lives here — renames, native SQL sources, an intervening view. Required, always."
     },
@@ -164,7 +164,7 @@
           "icon": "🔁",
           "title": "The formats you already have",
           "colour": "violet",
-          "body": "dbt manifest.json and catalog.json, a mapping workbook as .xlsx or .csv, and your PBIP project folder.",
+          "body": "dbt manifest.json and catalog.json, a mapping file as .csv, and your PBIP project folder.",
           "stat": "4 inputs  ·  all required"
         }
       ]

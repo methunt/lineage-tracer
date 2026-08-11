@@ -214,25 +214,23 @@ export const SLOTS = [
     {
         key: 'mapping',
         icon: IconSheet,
-        label: 'mapping.xlsx',
+        label: 'mapping.csv',
         hint: 'warehouse → Power BI mapping',
         // Spelled out on this one slot only: it is the input a reader is most
         // likely to think of as a nice-to-have, and it is not — the renames it
         // carries are links no amount of parsing can derive.
         empty: 'Required. Rows for renames automatic matching cannot find.',
-        accept: '.xlsx,.csv',
+        accept: '.csv',
         read: async payload => {
             const file = oneFile(payload);
-            if (!/\.(xlsx|csv)$/i.test(file.name)) {
-                throw new Error(`${file.name} is not an .xlsx or .csv file.`);
+            if (!/\.csv$/i.test(file.name)) {
+                throw new Error(`${file.name} is not a .csv file.`);
             }
             // Headers are validated by the reader that owns them, at build
             // time — duplicating that rule here is how the two drift apart.
             return {
                 name: file.name,
-                data: file.name.toLowerCase().endsWith('.csv')
-                    ? await file.text()
-                    : await file.arrayBuffer(),
+                data: await file.text(),
                 summary: `${file.name} · ${formatSize(file.size)}`,
             };
         },

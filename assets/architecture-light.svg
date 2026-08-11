@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 372"
      width="1200" height="372" role="img"
-     aria-label="Data flow: dbt catalog and manifest into a Python column-lineage extractor running in the browser, a Power BI project folder into JavaScript PBIP parsers, both plus a mapping workbook into the join at the warehouse boundary, producing one graph with lineage, impact, page layout, diagnostics and an HTML export.">
+     aria-label="Data flow: dbt catalog and manifest into a Python column-lineage extractor running in the browser, a Power BI project folder into JavaScript PBIP parsers, both plus a mapping file into the join at the warehouse boundary, producing one graph with lineage, impact, page layout, diagnostics and an HTML export.">
   <style>
     /* Entrances move, never fade: a renderer that drops the CSS must still
        show a fully legible diagram. Only the dataflow dashes loop. */
@@ -34,7 +34,7 @@
 <g class="rise">
   <rect x="24" y="180" width="236" height="56" rx="10" fill="#F6F8FA" stroke="#D0D7DE"/>
   <rect x="24" y="180" width="4" height="56" rx="2" fill="#b45309"/>
-  <text x="42" y="207" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="16.5" font-weight="700" fill="#1F2328">mapping.xlsx / .csv</text>
+  <text x="42" y="207" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="16.5" font-weight="700" fill="#1F2328">mapping.csv</text>
   <text x="42" y="231" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#656D76">links that cannot be derived</text>
 </g>
 <g class="rise">

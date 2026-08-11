@@ -20,7 +20,7 @@ npx serve ui/dist-web
 ```
 
 Open it and hand it four things — `manifest.json`, `catalog.json`, the mapping
-workbook and the PBIP folder — and it builds the graph in the tab. Nothing is
+`.csv` and the PBIP folder — and it builds the graph in the tab. Nothing is
 uploaded. All four are required: **Build lineage** stays disabled until every
 slot is filled.
 
@@ -42,7 +42,7 @@ node src/cli.js graph \
   --manifest  path/to/dbt/target/manifest.json \
   --catalog   path/to/dbt/target/catalog.json \
   --pbip      "path/to/MyProject" \
-  --mapping   mapping.xlsx \
+  --mapping   mapping.csv \
   --out       graph.json
 ```
 
@@ -57,7 +57,7 @@ node src/cli.js graph \
 | `--manifest` | yes | dbt `target/manifest.json`, compiled |
 | `--catalog` | yes | dbt `target/catalog.json` — supplies real column types |
 | `--pbip` | yes | PBIP project root, holding `<name>.SemanticModel` and `<name>.Report` |
-| `--mapping` | no | `.xlsx` or `.csv` — only needed where the link can't be derived |
+| `--mapping` | no | `.csv` — only needed where the link can't be derived |
 | `--layers` | no | layer order, e.g. `base,staging,warehouse,analytics`. Auto-detected from folders if omitted |
 
 Scope is one dbt project and one report per run.
@@ -67,7 +67,7 @@ Scope is one dbt project and one report per run.
 `From` is always the warehouse relation dbt builds; `To` is always the Power BI
 object. Two mechanisms, in precedence order:
 
-1. **Mapping workbook** — your rows always win. A row asserts a link that may
+1. **Mapping file** — your rows always win. A row asserts a link that may
    cross layers the tool cannot see (views, a second warehouse, native SQL).
    These render as **dashed** edges, marked *declared*.
 2. **Automatic matching** — resolved by reading the M query back to
@@ -93,9 +93,9 @@ resolves the table as if the chain had been written inline. On a large real-worl
 project this took the build from **no links at all to dozens**. pbip-documenter itself is
 never modified.
 
-## Mapping workbook
+## Mapping file
 
-One sheet named `mapping`:
+A `.csv` with these headers:
 
 | From Database | From Schema | From Table | From Column | To Table | To Column |
 |---|---|---|---|---|---|
@@ -144,7 +144,7 @@ manifest.json + catalog.json ─┐
                               ├─► Python: colibri DbtColumnLineageExtractor ─┐
 PBIP folder ──────────────────┤                                              ├─► merge ─► one graph
                               ├─► Node: pbip-documenter parsers + m-inline ──┤
-mapping.xlsx ─────────────────┴──────────────────────────────────────────────┘
+mapping.csv ──────────────────┴──────────────────────────────────────────────┘
 ```
 
 The same merge runs in two places: as Node, from the CLI, and as the same

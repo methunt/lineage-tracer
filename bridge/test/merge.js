@@ -60,7 +60,7 @@ function fixture(mappingRows) {
 
 const crossings = graph => graph.edges.filter(e => e.kind === 'dbt_to_pbi');
 
-// ── Automatic matching, with no workbook at all ──────────────────────────────
+// ── Automatic matching, with no mapping file at all ──────────────────────────
 {
     const g = fixture([]);
     check('every column matches automatically when nothing is declared',

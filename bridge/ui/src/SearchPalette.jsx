@@ -183,7 +183,7 @@ export default function SearchPalette() {
         }
         return [...counts.entries()].sort((a, b) => b[1] - a[1])
             .map(([key, count]) => ({ key, label: key, count }));
-    }, []);
+    }, [open]);
 
     const results = useMemo(() => {
         const needle = q.trim().toLowerCase();

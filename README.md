@@ -1,7 +1,7 @@
 <div align="center">
 
 <!-- HOSTED-URL:START — replace every occurrence of the placeholder below with the GitHub Pages URL -->
-<a href="https://REPLACE-ME.github.io/lineage-tracer/">
+<a href="https://methunt.github.io/lineage-tracer/">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/hero-dark.svg">
     <img alt="Lineage Tracer — trace a column from the dbt model that builds it to the Power BI visual that renders it, through Power Query renames, measures and calculation groups." src="assets/hero-light.svg">
@@ -30,7 +30,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/strip-why-dark.svg">
-  <img alt="Three reasons to use it. No setup, no waiting: open the page, drop in your files, press Build lineage — 0 installs, 0 servers. Nothing leaves the tab: no API, no upload path, no telemetry, no account, no stored state — 0 uploads, 0 accounts. The formats you already have: dbt manifest.json and catalog.json, a mapping workbook, and your PBIP project folder — 4 inputs, all required." src="assets/strip-why-light.svg">
+  <img alt="Three reasons to use it. No setup, no waiting: open the page, drop in your files, press Build lineage — 0 installs, 0 servers. Nothing leaves the tab: no API, no upload path, no telemetry, no account, no stored state — 0 uploads, 0 accounts. The formats you already have: dbt manifest.json and catalog.json, a mapping file, and your PBIP project folder — 4 inputs, all required." src="assets/strip-why-light.svg">
 </picture>
 
 </div>
@@ -48,7 +48,7 @@
 <div align="center">
 
 <!-- HOSTED-URL:START -->
-<a href="https://REPLACE-ME.github.io/lineage-tracer/">
+<a href="https://methunt.github.io/lineage-tracer/">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/cta-dark.svg">
     <img alt="Open Lineage Tracer — runs in your browser, no account, nothing is uploaded" src="assets/cta-light.svg" width="660">
@@ -73,7 +73,7 @@
 
 | | You are here to… | Go to |
 |---|---|---|
-| 🧰 | **Get a graph out of it today** | [Part 1 · The four files](#-part-1) — then [the mapping workbook](#-part-2), which is the part people skip. |
+| 🧰 | **Get a graph out of it today** | [Part 1 · The four files](#-part-1) — then [the mapping file](#-part-2), which is the part people skip. |
 | 🕸️ | **See what it actually renders** | [Part 3 · Lineage canvas](#-part-3) → [Part 4 · Impact](#-part-4) → [Part 5 · Page layout](#-part-5) |
 | 🩺 | **Find out why something did not link** | [Part 6 · Diagnostics](#-part-6) — eleven sections, each row linking back into the graph. |
 | 🔒 | **Clear it with your security reviewer** | [Privacy](#-privacy) and [SECURITY.md](SECURITY.md), which lists what it deliberately does **not** protect against. |
@@ -83,7 +83,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/tour-inputs-dark.svg">
-  <img alt="Tour: the four required inputs — manifest.json, catalog.json, the mapping workbook and the PBIP folder — flow into Lineage Tracer running in your browser, and one self-contained HTML file comes out. Nothing is uploaded." src="assets/tour-inputs-light.svg" width="760">
+  <img alt="Tour: the four required inputs — manifest.json, catalog.json, the mapping file and the PBIP folder — flow into Lineage Tracer running in your browser, and one self-contained HTML file comes out. Nothing is uploaded." src="assets/tour-inputs-light.svg" width="760">
 </picture>
 
 </div>
@@ -142,7 +142,7 @@ crossed by hand.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/section-inputs-dark.svg">
-  <img alt="Part 1 — the four files it needs: manifest.json, catalog.json, a mapping workbook and the PBIP project folder. All four are required; Build lineage stays disabled until every slot is filled." src="assets/section-inputs-light.svg">
+  <img alt="Part 1 — the four files it needs: manifest.json, catalog.json, a mapping file and the PBIP project folder. All four are required; Build lineage stays disabled until every slot is filled." src="assets/section-inputs-light.svg">
 </picture>
 
 <br>
@@ -151,12 +151,12 @@ crossed by hand.
 |---|---|---|---|
 | 🧾 | **`manifest.json`** | Your dbt project's `target/manifest.json` | The models, the tests, and the **compiled SQL** the column lineage is read out of. |
 | 🗄️ | **`catalog.json`** | Your dbt project's `target/catalog.json` | Real column types and the warehouse schema behind each model. |
-| 📊 | **Mapping workbook** | `.xlsx` with one sheet named `mapping`, or a `.csv` with the same headers | The links no amount of parsing can derive: renames, native SQL, an intervening view. **[Full detail below.](#-part-2)** |
+| 📊 | **Mapping file** | A `.csv` with the headers described below | The links no amount of parsing can derive: renames, native SQL, an intervening view. **[Full detail below.](#-part-2)** |
 | 📁 | **Power BI project folder** | The PBIP project root, holding `<name>.SemanticModel` and `<name>.Report` | The semantic model and the report, read in place. |
 
 > [!IMPORTANT]
 > **All four are required.** The **Build lineage** button stays disabled until
-> every slot is filled, and there is no way past it — the mapping workbook is an
+> every slot is filled, and there is no way past it — the mapping file is an
 > input, not an enhancement.
 
 > [!WARNING]
@@ -180,7 +180,7 @@ crossed by hand.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/section-mapping-dark.svg">
-  <img alt="Part 2 — the mapping workbook: the one input no parsing can replace. Every declared link between a dbt column and a semantic model column lives here — renames, native SQL sources, an intervening view. Required, always." src="assets/section-mapping-light.svg">
+  <img alt="Part 2 — the mapping file: the one input no parsing can replace. Every declared link between a dbt column and a semantic model column lives here — renames, native SQL sources, an intervening view. Required, always." src="assets/section-mapping-light.svg">
 </picture>
 
 <br>
@@ -191,7 +191,7 @@ crossed by hand.
 > ever derive: a column renamed in Power Query, a table fed by native SQL, a view
 > sitting between the mart and the model.
 
-**What it is:** one sheet named `mapping` (or a `.csv` with the same headers).
+**What it is:** a `.csv` with these headers.
 `From` is always the warehouse relation dbt builds; `To` is always the Power BI
 object. Header matching is case- and spacing-insensitive.
 
@@ -213,7 +213,7 @@ object. Header matching is case- and spacing-insensitive.
 | `ANALYTICS` | `marts` | `dim_customer` | `cust_key` | `Customer` | *(blank)* | 📕 **Rejected.** Both column cells must be filled or both blank — reported, never guessed at. |
 
 > [!TIP]
-> **Where the rows come from:** build once with an empty-of-rows workbook, then
+> **Where the rows come from:** build once with an empty-of-rows mapping file, then
 > read the Diagnostics tab. *Semantic model tables with no warehouse source* is
 > exactly the worklist of rows worth writing. Build again.
 
@@ -237,7 +237,7 @@ you can see on the canvas which one you are looking at.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/architecture-dark.svg">
-  <img alt="Data flow: catalog.json and manifest.json feed a dbt column-lineage extractor running as Python in the browser; the Power BI project folder feeds JavaScript PBIP parsers; those two plus the mapping workbook feed the join at the warehouse boundary, which produces one graph offering a lineage canvas, impact analysis, page layout, diagnostics and a one-file HTML export. Nothing leaves the tab." src="assets/architecture-light.svg">
+  <img alt="Data flow: catalog.json and manifest.json feed a dbt column-lineage extractor running as Python in the browser; the Power BI project folder feeds JavaScript PBIP parsers; those two plus the mapping file feed the join at the warehouse boundary, which produces one graph offering a lineage canvas, impact analysis, page layout, diagnostics and a one-file HTML export. Nothing leaves the tab." src="assets/architecture-light.svg">
 </picture>
 
 Two extractors and one join, all of it inside the page. The dbt side runs
@@ -403,7 +403,7 @@ never heard of this tool.
 |---|---|---|---|---|
 | 🔗 | **Crosses the warehouse boundary** | ✅ dbt source → rendered visual | ❌ stops at the mart | ❌ starts at the dataset |
 | 🔤 | **Column-level, end to end** | ✅ | ✅ inside dbt | ⚠️ dataset/table level |
-| ✍️ | **Human-declared links for renames and native SQL** | ✅ the [mapping workbook](#-part-2), drawn distinctly | ❌ | ❌ |
+| ✍️ | **Human-declared links for renames and native SQL** | ✅ the [mapping file](#-part-2), drawn distinctly | ❌ | ❌ |
 | 💥 | **Blast radius as counts, not colour** | ✅ exact traversal, raw counts, stated thresholds | ❌ | ❌ |
 | 🖼️ | **Shows *where on the page* a break lands** | ✅ [Page layout](#-part-5) | ❌ | ❌ |
 | 🩺 | **Names what did *not* link** | ✅ [11 diagnostic sections](#-part-6) | ❌ | ❌ |
@@ -430,13 +430,13 @@ never heard of this tool.
 
 Yes. **Build lineage** stays disabled until every slot is filled. The two dbt
 artifacts give the warehouse side, the PBIP folder gives the Power BI side, and
-the [mapping workbook](#-part-2) is where you assert the links neither side can
+the [mapping file](#-part-2) is where you assert the links neither side can
 derive. There is no three-file mode.
 
 </details>
 
 <details>
-<summary><b>What if I have no renames — can the mapping workbook be empty of rows?</b></summary>
+<summary><b>What if I have no renames — can the mapping file be empty of rows?</b></summary>
 
 <br>
 
@@ -513,7 +513,7 @@ should never look the same on screen, and where both exist the declared row wins
 |---|---|---|
 | 🧾 | **A parse-only manifest** | No lineage *inside* dbt — the cross-boundary links still resolve, but the chain stops at the warehouse relation. Export a manifest that carries compiled SQL. The slot warns you before you build. |
 | 🔁 | **One dbt project and one report per run** | A second report means a second run. There is no multi-report merge. |
-| 📊 | **The mapping workbook is required, even if empty of rows** | The slot must be filled for **Build lineage** to enable. Renames and native-SQL sources are links no parsing can derive. |
+| 📊 | **The mapping file is required, even if empty of rows** | The slot must be filled for **Build lineage** to enable. Renames and native-SQL sources are links no parsing can derive. |
 | ⏬ | **First visit downloads a Python runtime** | Roughly 7 MB of WebAssembly runtime and Python stdlib from jsDelivr, plus ~0.8 MB of vendored wheel and extractor sources. The download starts while you are still picking files. Second visit: served from cache. |
 | 🧩 | **It needs WebAssembly and module workers** | The extractor is real Python compiled to WebAssembly, driven from a module worker. A browser without both cannot run the build. |
 | 🧪 | **The parsers have not been adversarially fuzzed** | Malformed dbt/PBIP/M/DAX/TMDL input can produce parser errors or incorrect lineage rather than a clean refusal. |
@@ -524,7 +524,7 @@ should never look the same on screen, and where both exist the declared row wins
 
 | | | |
 |---|---|---|
-| 🚫 | **Your files are never uploaded** | The manifest, catalog, mapping workbook and PBIP folder are read in the browser. There is no server, no API and no upload path in the app. |
+| 🚫 | **Your files are never uploaded** | The manifest, catalog, mapping file and PBIP folder are read in the browser. There is no server, no API and no upload path in the app. |
 | 📴 | **No telemetry** | No analytics, no `sendBeacon`, no first-party tracking anywhere in the app. |
 | 🕳️ | **No account, no storage** | Nothing persists past the browser session unless you export a file to disk yourself. |
 | 🌐 | **One outbound dependency** | The Python/WebAssembly runtime is fetched from `cdn.jsdelivr.net` at a pinned version. It carries no integrity hash today — an accepted, documented supply-chain trust. |
@@ -558,14 +558,6 @@ and derived links visually distinct. Security findings: read
 [SECURITY.md](SECURITY.md) first — several known weak points are already
 documented there.
 
-<a id="-author"></a>
-
-### 👤 Author
-
-Built by **Methun T**.
-
-[![Connect on LinkedIn](https://img.shields.io/badge/LinkedIn-Methun%20T-0a66c2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/methunt/)
-
 <a id="-licence-and-attribution"></a>
 
 ### ⚖️ Licence and attribution
@@ -593,13 +585,12 @@ visibility, visual geometry. They stay MIT.
 <div align="center">
 
 <!-- HOSTED-URL:START -->
-**[Open Lineage Tracer →](https://REPLACE-ME.github.io/lineage-tracer/)**
+**[Open Lineage Tracer →](https://methunt.github.io/lineage-tracer/)**
 <!-- HOSTED-URL:END -->
 
 [![Open it](https://img.shields.io/badge/open-Lineage%20Tracer-4f46e5?style=for-the-badge)](#-start)
 [![Security](https://img.shields.io/badge/read-SECURITY.md-be123c?style=for-the-badge)](SECURITY.md)
 [![Contributing](https://img.shields.io/badge/contributing-welcome-047857?style=for-the-badge)](#-contributing)
-[![LinkedIn](https://img.shields.io/badge/Methun%20T-LinkedIn-0a66c2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/methunt/)
 
 Runs in your browser · No account · Nothing is uploaded · **All four files required**
 

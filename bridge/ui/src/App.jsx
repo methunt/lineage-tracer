@@ -8,6 +8,7 @@ import Logo from './Logo';
 import Diagnostics from './Diagnostics';
 import PageLayout from './PageLayout';
 import SearchPalette from './SearchPalette';
+import Footer from './Footer';
 import { IconSearch, IconSun, IconMoon, IconLayers, IconWarn, IconPage, IconDownload, IconSpinner } from './icons';
 import { exportViewer } from './web/export-viewer';
 
@@ -234,6 +235,10 @@ export default function App() {
                 <div className="surface flex-1 min-h-0 overflow-auto scrollbar-thin"><Diagnostics /></div>
             </div>
             <SearchPalette />
+            {/* Hidden only behind the landing modal, and the landing modal only
+                exists in the hosted web build — the viewer (dev default and
+                export target) has no landing page to hide it from. */}
+            {(!CAN_EXPORT || hasGraph) && <Footer />}
         </div>
     );
 }
