@@ -75,12 +75,9 @@ class TMDLParser {
                     if (table.calculationGroup) {
                         table._isCalcGroup = true;
                     }
-                    // Tag field-parameter tables (any partition source or column expression uses NAMEOF)
-                    const fpExpressions = [
-                        ...table.partitions.map(p => p.source || ''),
-                        ...table.columns.map(c => c.expression || '')
-                    ];
-                    if (fpExpressions.some(expr => /\bNAMEOF\s*\(/i.test(expr))) {
+                    // Tag field-parameter tables. Decided in one place — see
+                    // readFieldParameter — so no two callers can disagree.
+                    if (table.fieldParameter) {
                         table._isFieldParameter = true;
                     }
                     this.model.tables.push(table);
@@ -177,11 +174,19 @@ class TMDLParser {
         let baseIndent = 0;
         let expressionIndent = 0;
         let inBacktickBlock = false;
+        // An annotation or extended property whose value is a block: everything
+        // indented under it belongs to that value, not to the object.
+        let skipBlockIndent = null;
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             const trimmed = line.trim();
             const indent = line.search(/\S/);
+
+            if (skipBlockIndent !== null) {
+                if (trimmed !== '' && indent > skipBlockIndent) continue;
+                skipBlockIndent = null;
+            }
 
             /*
              * Triple-backtick blocks.
@@ -363,6 +368,22 @@ class TMDLParser {
                         const val = trimmed.split('=')[1]?.trim().replace(/^['"]|['"]$/g, '');
                         currentObject.properties.pbiResultType = val;
                     }
+                    /*
+                     * The marker Power BI writes on a field parameter's hidden
+                     * reference column. Read as the marker rather than inferred
+                     * from the DAX, so a parameter is still recognisable when
+                     * its row list is empty.
+                     */
+                    if (currentObject && /^extendedProperty\s+ParameterMetadata\b/.test(trimmed)) {
+                        currentObject.properties.hasParameterMetadata = 'true';
+                    }
+                    /*
+                     * A value written as a block follows on the lines beneath.
+                     * Those lines are JSON and look like properties, so left
+                     * unread they were written onto the object as keys nobody
+                     * declared — one collision away from overwriting a real one.
+                     */
+                    if (/=\s*$/.test(trimmed)) skipBlockIndent = indent;
                     continue;
                 }
             }
@@ -384,7 +405,93 @@ class TMDLParser {
         // Finish last object
         this._finishCurrentObject(state, currentObject, currentExpression, table);
 
+        table.fieldParameter = TMDLParser.readFieldParameter(table);
+
         return table;
+    }
+
+    /**
+     * A field parameter's rows, or null if the table is not one.
+     *
+     * The single place this is decided. It used to be decided twice — once here
+     * by one regex and once in the lineage engine by a looser one — so the same
+     * table could be a parameter to one caller and an ordinary table to the
+     * other, with nothing reporting the disagreement.
+     *
+     * Two independent signals, because either can appear alone: the marker
+     * Power BI writes on the hidden reference column (present even when the row
+     * list is empty) and rows that reference a field (written by older and
+     * hand-edited files that carry no marker).
+     *
+     * @param {Object} table a parsed table
+     * @returns {{items: Array, markerColumn: string|null}|null}
+     */
+    static readFieldParameter(table) {
+        const marker = (table.columns || []).find(c => c.hasParameterMetadata);
+
+        /*
+         * Only a calculated partition, and never a measure: `NAMEOF` appears in
+         * ordinary DAX to name a field for a function's benefit, and a table
+         * holding one of those is not a parameter.
+         */
+        const bodies = (table.partitions || [])
+            .filter(p => p.sourceType === 'calculated' || !p.sourceType)
+            .map(p => p.source || '');
+
+        const items = bodies.flatMap(body => TMDLParser.readFieldParameterItems(body));
+        if (!marker && items.length === 0) return null;
+
+        return { items, markerColumn: marker ? marker.name : null };
+    }
+
+    /**
+     * The tuples in a field parameter's body, as `{caption, targetTable,
+     * targetName, order, group}`.
+     *
+     * Each row is a caption, a reference, an order, and optionally a group
+     * caption — and both the three- and four-element widths are written in
+     * practice, so a pattern fixed to one width silently drops the other. The
+     * reference's table name may be quoted or bare; requiring the quotes made
+     * a legitimately written parameter invisible.
+     *
+     * The reference itself comes in three forms, and the third is the one that
+     * matters most: a measure is normally written with no table at all,
+     * `NAMEOF([Total])`, which is how a parameter over measures is authored.
+     * Requiring a table name made every such parameter parse to nothing — and a
+     * measure reached only through a parameter has no other reason to look used,
+     * so the omission read as "safe to change".
+     *
+     * The caption is the one part that cannot be recovered from anywhere else:
+     * it is authored here, it is what the reader sees in the slicer, and it is
+     * frequently nothing like the name of the field behind it.
+     */
+    static readFieldParameterItems(body) {
+        if (!body || !/\bNAMEOF\s*\(/i.test(body)) return [];
+
+        const TUPLE = new RegExp([
+            /\(\s*"((?:[^"]|"")*)"\s*,/,                       // caption
+            // reference: 'Quoted'[name], Bare[name], or [name] on its own
+            /\s*NAMEOF\s*\(\s*(?:'([^']+)'|([^'[\s,()]+))?\s*\[([^\]]+)\]\s*\)/,
+            /(?:\s*,\s*(-?\d+))?/,                             // order
+            /(?:\s*,\s*"((?:[^"]|"")*)")?/,                    // group caption
+        ].map(r => r.source).join(''), 'gi');
+
+        // A quote inside a DAX string literal is written twice.
+        const text = s => (s == null ? null : s.replace(/""/g, '"'));
+
+        const items = [];
+        for (const m of body.matchAll(TUPLE)) {
+            items.push({
+                caption: text(m[1]),
+                // Null, not the empty string: nothing to resolve against, and a
+                // caller matching on a name must not match on a blank one.
+                targetTable: m[2] || m[3] || null,
+                targetName: m[4],
+                order: m[5] != null ? parseInt(m[5], 10) : null,
+                group: text(m[6]),
+            });
+        }
+        return items;
     }
 
     /**
@@ -423,7 +530,8 @@ class TMDLParser {
                     sortByColumn: currentObject.properties.sortByColumn || null,
                     displayFolder: currentObject.properties.displayFolder || null,
                     dataCategory: currentObject.properties.dataCategory || null,
-                    expression: expressionText
+                    expression: expressionText,
+                    hasParameterMetadata: currentObject.properties.hasParameterMetadata === 'true'
                 });
                 break;
 
