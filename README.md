@@ -75,7 +75,7 @@
 |---|---|---|
 | 🧰 | **Get a graph out of it today** | [Part 1 · The four files](#-part-1) — then [the mapping file](#-part-2), which is the part people skip. |
 | 🕸️ | **See what it actually renders** | [Part 3 · Lineage canvas](#-part-3) → [Part 4 · Impact](#-part-4) → [Part 5 · Page layout](#-part-5) |
-| 🩺 | **Find out why something did not link** | [Part 6 · Diagnostics](#-part-6) — eleven sections, each row linking back into the graph. |
+| 🩺 | **Find out why something did not link** | [Part 6 · Diagnostics](#-part-6) — fourteen sections, each row linking back into the graph. |
 | 🔒 | **Clear it with your security reviewer** | [Privacy](#-privacy) and [SECURITY.md](SECURITY.md), which lists what it deliberately does **not** protect against. |
 | 🧠 | **Understand how it is built** | [How it is wired](#-wired) |
 
@@ -106,7 +106,8 @@ crossed by hand.
 |---|---|---|
 | **"What breaks if I rename this column?"** | Grep the repo, open the PBIX, click through pages, hope. | Select the column. Everything off its path dims, and the panel gives the exact downstream measure and visual counts. |
 | **"This visual is blank — where does its field come from?"** | Ask whoever built the model, if they still work here. | Walk the chain the other way: visual → measure → table → column → model → source, with the compiled SQL, DAX and M at each hop. |
-| **"Which semantic model columns have no dbt column behind them?"** | Unanswerable at any useful scale. | A named list in Diagnostics, alongside ten other checks. |
+| **"Which semantic model columns have no dbt column behind them?"** | Unanswerable at any useful scale. | A named list in Diagnostics, alongside thirteen other checks. |
+| **"This measure looks unused — can I drop it?"** | It appears in no visual, so you drop it, and a slicer three pages away stops working. | Fields reached only through a field parameter are traced like any other, so "used by nothing" means it. |
 | **Confidence in the answer** | A guess you cannot show anyone. | Declared links (your mapping rows) and derived links (parsed) are drawn differently and labelled. |
 | **Where your data goes** | Screenshots into chat, extracts into a shared drive. | Nowhere. Files are read in the browser. |
 | **Sharing the result** | A screenshot with no context. | One self-contained `.html` file you can email. |
@@ -150,11 +151,6 @@ crossed by hand.
 | 🗄️ | **`catalog.json`** | Your dbt project's `target/catalog.json` | Real column types and the warehouse schema behind each model. |
 | 📊 | **Mapping file** | A `.csv` with the headers described below | The links no amount of parsing can derive: renames, native SQL, an intervening view. **[Full detail below.](#-part-2)** |
 | 📁 | **Power BI project folder** | The PBIP project root, holding `<name>.SemanticModel` and `<name>.Report` | The semantic model and the report, read in place. |
-
-> [!IMPORTANT]
-> **All four are required.** The **Build lineage** button stays disabled until
-> every slot is filled, and there is no way past it — the mapping file is an
-> input, not an enhancement.
 
 > [!WARNING]
 > **The manifest must contain compiled SQL.** A parse-only manifest is
@@ -338,7 +334,7 @@ on an empty state is worse than no tab.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/section-diagnostics-light.svg">
-  <img alt="Part 6 — diagnostics: eleven sections of everything that did not link, graded error, warning or info, each row linking back into the graph." src="assets/section-diagnostics-light.svg">
+  <img alt="Part 6 — diagnostics: fourteen sections of everything that did not link, graded error, warning or info, each row linking back into the graph." src="assets/section-diagnostics-light.svg">
 </picture>
 
 <br>
@@ -353,12 +349,15 @@ mistaken for a clean one.
 | 🔴 | **Mapping rows that could not be resolved** | You asserted a link and neither end of it exists. |
 | 🔴 | **Invalid mapping rows** | Rows the reader refused — including the exactly-one-column-cell-filled case. |
 | 🔴 | **Broken report references** | A visual referencing a field that is not in the semantic model. |
+| 🔴 | **Field parameters offering a field that is gone** | A parameter row naming a measure or column the model does not have. Nothing warns at open time — it breaks for whoever picks that label. |
 | 🟠 | **Join keys with no dbt column behind them** | A relationship key the warehouse side cannot account for. |
 | 🟠 | **Columns declared to come from more than one place** | Two sources claiming one column. |
 | 🟠 | **Widest reach, no dbt test** | Columns in the High band with nothing asserting their correctness. |
 | 🟠 | **Semantic model tables with no warehouse source** | The primary worklist your [mapping rows](#-part-2) come from. |
 | 🟠 | **Ambiguous matches** | The relation matched more than one dbt model. |
 | ⚪ | **Semantic model columns not traced to dbt** | Everything the join could not reach, by name. |
+| ⚪ | **Fields renamed inside a visual** | The label on the chart, beside the model's own name for the field. Renames that merely restate the name are not listed. |
+| ⚪ | **Fields a parameter can swap in** | Every label a field parameter offers and the field it reads, so a silent extraction failure cannot look like a report with no parameters. |
 | ⚪ | **This report does not read these tables** | dbt models with no consumer in this report. |
 | ⚪ | **Ignored mapping rows** | Rows that parsed but changed nothing. |
 
@@ -391,20 +390,22 @@ never heard of this tool.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/section-why-light.svg">
-  <img alt="Why this tool — what it does that a dbt lineage graph and a other lineage view cannot." src="assets/section-why-light.svg">
+  <img alt="Why this tool — what it does that a dbt lineage graph and a Power BI lineage view cannot." src="assets/section-why-light.svg">
 </picture>
 
 <br>
 
-| | | 🕸️ Lineage Tracer | 🧱 dbt docs / lineage | 🧩 Others |
+| | | 🕸️ Lineage Tracer | 🧱 dbt docs / lineage | 🧩 Power BI tools |
 |---|---|---|---|---|
 | 🔗 | **Crosses the warehouse boundary** | ✅ dbt source → rendered visual | ❌ stops at the mart | ❌ starts at the dataset |
-| 🔤 | **Column-level, end to end** | ✅ | ✅ inside dbt | ⚠️ dataset/table level |
+| 🔤 | **Column-level, end to end** | ✅ | ✅ inside dbt | ✅ inside the PBIP |
 | ✍️ | **Human-declared links for renames and native SQL** | ✅ the [mapping file](#-part-2), drawn distinctly | ❌ | ❌ |
 | 💥 | **Blast radius as counts, not colour** | ✅ exact traversal, raw counts, stated thresholds | ❌ | ❌ |
-| 🖼️ | **Shows *where on the page* a break lands** | ✅ [Page layout](#-part-5) | ❌ | ❌ |
-| 🩺 | **Names what did *not* link** | ✅ [11 diagnostic sections](#-part-6) | ❌ | ❌ |
-| 🔒 | **Runs with nothing uploaded** | ✅ entirely in your browser | n/a | ❌ service-side |
+| 🎛️ | **Follows a field parameter to every field it can swap in** | ✅ each row resolved, and back to the dbt column behind it | ❌ | ✅ |
+| 🏷️ | **Finds a field by the label a reader actually sees** | ✅ renamed in a visual, or captioned in a field parameter | ❌ | ⚠️ varies |
+| 🖼️ | **Shows *where on the page* a break lands** | ✅ [Page layout](#-part-5) | ❌ | ✅ |
+| 🩺 | **Names what did *not* link** | ✅ [14 diagnostic sections](#-part-6) | ❌ | ❌ |
+| 🔒 | **Runs with nothing uploaded** | ✅ entirely in your browser | n/a | ⚠️ depends on the tool |
 | 📤 | **Emailable single-file result** | ✅ | ❌ | ❌ |
 
 ---
@@ -503,6 +504,7 @@ should never look the same on screen, and where both exist the declared row wins
 |---|---|---|
 | 🧾 | **A parse-only manifest** | No lineage *inside* dbt — the cross-boundary links still resolve, but the chain stops at the warehouse relation. Export a manifest that carries compiled SQL. The slot warns you before you build. |
 | 🔁 | **One dbt project and one report per run** | A second report means a second run. There is no multi-report merge. |
+| 🎛️ | **A parameter-driven visual lists a snapshot** | The file records only the row that was selected when the report was saved, so a visual's field list is what it read *then*. Every row the parameter offers is still traced, and the visual says which one was showing. |
 | 📊 | **The mapping file is required, even if empty of rows** | The slot must be filled for **Build lineage** to enable. Renames and native-SQL sources are links no parsing can derive. |
 | ⏬ | **First visit downloads a Python runtime** | Roughly 7 MB of WebAssembly runtime and Python stdlib from jsDelivr, plus ~0.8 MB of vendored wheel and extractor sources. The download starts while you are still picking files. Second visit: served from cache. |
 | 🧩 | **It needs WebAssembly and module workers** | The extractor is real Python compiled to WebAssembly, driven from a module worker. A browser without both cannot run the build. |
@@ -547,6 +549,11 @@ keep every claim the UI makes verifiable from the artifacts, and keep declared
 and derived links visually distinct. Security findings: read
 [SECURITY.md](SECURITY.md) first — several known weak points are already
 documented there.
+
+**Reporting something?** [SUPPORT.md](SUPPORT.md) is the short version: raise it
+in [GitHub Issues](../../issues), and **never attach your dbt or Power BI
+files** — this tool uploads nothing, and a public issue would undo that. Describe
+the shape of the problem with invented names instead.
 
 <a id="-licence-and-attribution"></a>
 

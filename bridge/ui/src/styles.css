@@ -755,9 +755,33 @@ table.dt td.mono { font-family: var(--font-mono); font-size: var(--fs-code); }
  * and pulls the next one up behind it, which is what the reader wants from a
  * worklist. `column-span: all` keeps the wide sections full-bleed.
  */
-.dt-grid { columns: 620px; column-gap: 14px; }
-.dt-grid > * { break-inside: avoid; }
-.dt-grid-wide { column-span: all; }
+/*
+ * A grid of rows, not packed columns.
+ *
+ * This was `columns: 620px` — masonry — so that a one-row section did not stand
+ * beside a wall of empty space. It bought that at the price of every card in a
+ * row ending at a different height, and with a full-width section in the flow
+ * the balancing left a ragged gap above it that read as a broken layout rather
+ * than as a deliberately tight pack.
+ *
+ * Grid rows stretch instead, so two cards side by side share an edge. What made
+ * stretching unaffordable before was an uncapped table: one section of two
+ * hundred rows would have set the row height for the short card beside it.
+ * `.dt-scroll` caps every table's own height, so a row can only ever be about
+ * one capped table tall, and the leftover inside a short card is bounded.
+ */
+.dt-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(620px, 1fr));
+    gap: 14px;
+    align-items: stretch;
+}
+/* The wrapper stretches to the row; the card fills the wrapper. `min-width: 0`
+   because a grid item's default `auto` minimum is its content, which a long
+   identifier in a cell would push past the track and out of the card. */
+.dt-grid > * { display: flex; min-width: 0; }
+.dt-grid .dt-card { flex: 1; display: flex; flex-direction: column; margin-bottom: 0; }
+.dt-grid-wide { grid-column: 1 / -1; }
 .dt-clean-strip { display: flex; flex-wrap: wrap; gap: 4px 20px; margin-bottom: 14px; }
 .dt-clean-strip .dt-clear { margin: 0; padding: 6px 0; flex: 0 0 auto; }
 

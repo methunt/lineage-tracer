@@ -1357,6 +1357,42 @@ async function buildSampleReport() {
     check('diagnostics tab renders', /Mapping rows that could not be resolved/i.test(diag));
 
     /*
+     * Cards sharing a row share a bottom edge.
+     *
+     * Only a layout engine can answer this, and it regresses silently: the page
+     * still renders, still lists every finding, and simply looks broken. The
+     * measurement is the geometry rather than the CSS, so it survives whichever
+     * mechanism produces it.
+     *
+     * The horizontal test rides along because it has the same cause and the same
+     * invisibility from the data — a long identifier in a cell used to set the
+     * card's min-content width and push a table out past its own border.
+     */
+    const cardRows = await page.$$eval('[data-testid="diagnostics"] .dt-card', els => {
+        const rows = new Map();
+        let escaped = 0;
+        for (const el of els) {
+            const r = el.getBoundingClientRect();
+            const t = el.querySelector('table.dt');
+            if (t && Math.round(t.getBoundingClientRect().width) > Math.round(r.width)) escaped++;
+            // Bucketed, because two cards in a row start within a pixel of each
+            // other rather than at exactly the same y.
+            const key = Math.round(r.top / 8);
+            if (!rows.has(key)) rows.set(key, []);
+            rows.get(key).push(Math.round(r.bottom));
+        }
+        const spreads = [...rows.values()]
+            .filter(g => g.length > 1)
+            .map(g => Math.max(...g) - Math.min(...g));
+        return { spreads, escaped, cards: els.length };
+    });
+    check('diagnostics cards in a row end at the same height',
+        cardRows.cards > 0 && cardRows.spreads.every(s => s <= 1),
+        `${cardRows.cards} cards, ${cardRows.spreads.length} shared rows, spreads [${cardRows.spreads.join(', ')}]`);
+    check('and no table escapes the card it sits in',
+        cardRows.escaped === 0, `${cardRows.escaped} overflowing`);
+
+    /*
      * A diagnostics row is a way onto the canvas, and Back has to be a way out
      * of it: the row leaves a focus pin and a trace behind, and reconstructing
      * "the list I was reading" by hand is the cost Back exists to remove.
