@@ -119,6 +119,40 @@ const SECTIONS = [
         ],
     },
     {
+        key: 'fieldParametersBroken', title: 'Field parameters offering a field that is gone',
+        // A defect, and one that hides: the report opens, the visual renders on
+        // whichever row happens to be selected, and it fails only for the reader
+        // who picks this one.
+        severity: 'error',
+        hint: 'The row names a measure or column the semantic model does not have. '
+            + 'Nothing warns at open time — the visual breaks for whoever chooses this '
+            + 'label in the slicer.',
+        cols: [
+            ['Parameter', r => r.parameter, { mono: true, width: '20%' }],
+            ['Shown as', r => r.shownAs, { width: '20%' }],
+            ['Reads', r => r.reads, { mono: true }],
+            ['Why', r => r.reason, { muted: true }],
+        ],
+        link: r => `pbi:table:${r.parameter}`,
+    },
+    {
+        key: 'fieldParameters', title: 'Fields a parameter can swap in',
+        // Context, not a worklist — and the same reason the renames are listed:
+        // without it, "this report has no parameters" and "we could not read
+        // them" look identical from the outside.
+        severity: 'info',
+        hint: 'A field parameter lets a reader change what a visual reads. Every label '
+            + 'here is authored in the model and inherited by every visual bound to the '
+            + 'parameter, so the field a visual shows is the reader\'s choice, not the file\'s.',
+        cols: [
+            ['Parameter', r => r.parameter, { mono: true, width: '20%' }],
+            ['Shown as', r => r.shownAs, { width: '20%' }],
+            ['Reads', r => r.reads, { mono: true }],
+            ['Kind', r => r.kind, { width: '7rem', muted: true }],
+        ],
+        link: r => `pbi:table:${r.parameter}`,
+    },
+    {
         key: 'dbtNodesNotUsed', title: 'This report does not read these tables',
         severity: 'info',
         hint: 'Nothing here reaches a visual, a measure or a page — directly or through '
