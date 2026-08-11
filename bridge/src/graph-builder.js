@@ -73,6 +73,7 @@ function buildGraph({ dbtGraph, pbiGraph, pbip, mapping, layerOrder }) {
         ambiguousMatches: [],
         modelTablesWithoutSource: [],
         brokenRefs: (pbiGraph.stats.brokenRefs || []).map(normaliseBrokenRef),
+        fieldRenames: [...(pbiGraph.stats.fieldRenames || [])],
         modelColumnsUnlinked: [],
         relationshipKeysUnlinked: [],
         multiSourceColumns: [],

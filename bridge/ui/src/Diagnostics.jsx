@@ -101,6 +101,24 @@ const SECTIONS = [
         link: r => `pbi:table:${r.table}`,
     },
     {
+        key: 'fieldRenames', title: 'Fields renamed inside a visual',
+        // Not a defect, and not a worklist. It is here so that "the panel shows
+        // no renames" and "the extractor found no renames" are answerable apart:
+        // an author who knows they renamed something and sees zero rows here has
+        // been told the extraction broke, rather than being left to trust it.
+        severity: 'info',
+        hint: 'The label is the only name a report reader ever sees; the semantic model '
+            + 'still uses the name in the Field column, and that is the one a change breaks. '
+            + 'Renames that merely restate the field name are not listed.',
+        cols: [
+            ['Page', r => r.page, { width: '18%' }],
+            ['Visual', r => r.visual, { width: '20%' }],
+            ['Field', r => r.field, { mono: true }],
+            ['Shown as', r => r.shownAs, { width: '20%' }],
+            ['Role', r => r.role, { width: '7rem', muted: true }],
+        ],
+    },
+    {
         key: 'dbtNodesNotUsed', title: 'This report does not read these tables',
         severity: 'info',
         hint: 'Nothing here reaches a visual, a measure or a page — directly or through '

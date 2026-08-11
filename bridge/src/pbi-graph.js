@@ -344,12 +344,20 @@ function buildPbiGraph(pbip) {
      * reader ever sees; this one is the only name they *do* see.
      */
     const aliasIndex = new Map();          // "type|table|field" -> Map(alias -> sites[])
+    const renameRows = [];                 // the same facts, flat, for Diagnostics
     for (const visual of payload.visualData?.visuals || []) {
         for (const field of visual.fields || []) {
             const fName = field.name || field.column || field.hierarchy;
             const fTable = field.table || field.entity;
             if (!fName || !fTable) continue;
             for (const alias of field.displayNames || []) {
+                renameRows.push({
+                    page: visual.pageName || '',
+                    visual: visual.visualName || visual.visualType || '',
+                    field: `${fTable}[${fName}]`,
+                    shownAs: alias,
+                    role: field.projectionName || '',
+                });
                 const key = `${field.type}|${lower(fTable)}|${lower(fName)}`;
                 if (!aliasIndex.has(key)) aliasIndex.set(key, new Map());
                 const byAlias = aliasIndex.get(key);
@@ -590,6 +598,17 @@ function buildPbiGraph(pbip) {
             measures: Object.values(nodes).filter(n => n.kind === 'measure').length,
             visuals: Object.values(nodes).filter(n => n.kind === 'visual').length,
             brokenRefs: (engine.brokenRefs || []).filter(ref => !resolvesIgnoringCase(ref, nodes)),
+            /*
+             * Every rename, one row per place it is applied.
+             *
+             * Reported rather than merely used, on the same principle as a
+             * degraded relation match: the alternative is a reader having to
+             * take the extractor's word for it. Zero rows on a report whose
+             * author knows they renamed something is the signal that the
+             * extraction is what broke, and without this the panel's silence
+             * would look identical to a report that has no renames.
+             */
+            fieldRenames: renameRows,
         },
     };
 }
