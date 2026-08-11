@@ -898,6 +898,7 @@ async function buildSampleReport() {
     const backPanel = await visiblePanels();
     check('and is still there when you come back', backPanel === 1,
         `${backPanel} panel(s) back on layout`);
+
     await page.locator('button[role="tab"]', { hasText: 'Lineage' }).click();
     await page.waitForTimeout(600);
 
@@ -1382,6 +1383,81 @@ async function buildSampleReport() {
     check('dbt cards carry a test count', badges.total > 0 && badges.tested > 0,
         `${badges.tested} of ${badges.total} tested`);
     check('Power BI cards do not', badges.onPbi === 0, `${badges.onPbi} pbi cards badged`);
+
+    /*
+     * Escape is the rail's Reset on a key: back to the state the report opened
+     * in.
+     *
+     * Checked from the layout tab in particular, because it is the tab that
+     * needed it. Its rail is the page list rather than the one holding Reset, so
+     * a visual selected here had no control on screen that would release it —
+     * and "Reset layout" is not that control, since it restores dragged
+     * positions and leaves the selection alone by design.
+     *
+     * Last in the file on purpose: this key puts the whole view back to the state
+     * the report opened in, so anything asserted after it would be reading a
+     * canvas that had just been emptied underneath it.
+     */
+    await page.locator('header button[role="tab"]', { hasText: 'Page layout' }).click();
+    await page.waitForTimeout(900);
+    await page.locator('[data-testid="layout-visual"]').first().click();
+    await page.waitForTimeout(800);
+    const markedBoxes = () => page.locator(
+        '[data-testid="layout-visual"][data-selected], [data-testid="layout-visual"][data-lit]').count();
+    const markedBefore = await markedBoxes();
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(1000);
+    const markedAfter = await markedBoxes();
+    // Naming the survivors, not counting them: "1 left" sends the next reader
+    // hunting, and which box it is says immediately whether a selection or a
+    // stale trace is the thing that would not let go.
+    const survivors = await page.$$eval('[data-testid="layout-visual"]', els => els
+        .map(e => ({ n: (e.getAttribute('title') || '').split(' · ')[0],
+                     lit: e.getAttribute('data-lit'), sel: e.getAttribute('data-selected') }))
+        .filter(r => r.lit || r.sel));
+    check('Escape clears the selection the layout tab cannot otherwise release',
+        markedBefore > 0 && markedAfter === 0 && (await visiblePanels()) === 0,
+        `${markedBefore} marked before, ${markedAfter} after${
+            survivors.length ? ` — left: ${JSON.stringify(survivors)}` : ''}`);
+
+    /*
+     * But a find box owns its own Escape. Someone clearing a filter they just
+     * typed is not asking for the canvas to change underneath them, so the key
+     * is only the canvas's when the caret is not in a field.
+     */
+    await page.locator('header button[role="tab"]', { hasText: 'Lineage' }).click();
+    await page.waitForTimeout(600);
+    await page.keyboard.press('Control+k');
+    await page.waitForTimeout(400);
+    const clearForEsc = page.locator('[data-testid="search-palette"] button', { hasText: /^clear$/ });
+    if (await clearForEsc.count()) await clearForEsc.click();
+    await page.locator('[data-testid="palette-input"]').fill('customer');
+    await page.waitForTimeout(500);
+    await page.locator('[data-testid="palette-result"]').first().click();
+    await page.waitForTimeout(1400);
+    const railFilter = page.locator('aside input[placeholder^="Filter"]').first();
+    await railFilter.fill('cust');
+    await railFilter.press('Escape');
+    await page.waitForTimeout(600);
+    check('Escape typed into a filter box is left to the box',
+        (await visiblePanels()) === 1);
+    // And with the caret out of the field, the same key resets the view.
+    await page.locator('header').first().click({ position: { x: 5, y: 5 } }).catch(() => {});
+    await page.waitForTimeout(300);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(900);
+    /*
+     * A reset, not a clear: the canvas is back to the question it opens on, the
+     * rail's filter box is empty, and the panel is gone. Asserting the empty
+     * state rather than a card count is the point — "0 cards" would also pass on
+     * a canvas that had merely been filtered down to nothing.
+     */
+    const railBox = page.locator('aside input[placeholder^="Filter"]').first();
+    check('Escape outside a filter box resets to the state the report opened in',
+        (await visiblePanels()) === 0
+        && (await page.locator('[data-testid="show-everything"]').count()) === 1
+        && (await railBox.inputValue()) === '',
+        `panel ${await visiblePanels()}, filter "${await railBox.inputValue()}"`);
 
     check('no runtime errors', errors.length === 0, errors[0]?.slice(0, 160) || '');
 

@@ -755,6 +755,74 @@ export const useStore = create((set, get) => ({
 
     clearFocus: () => set({ focusRoot: null, resultSet: null, reveals: {} }),
 
+    /*
+     * Escape: back to the state the report opened in.
+     *
+     * Everything the reader has narrowed or picked goes — the selection and the
+     * trace it lit, the focus pin and its reveals, the layer and resource eyes,
+     * the linked-only toggle, the rail's text box — and the canvas returns to
+     * the question it opens on. Not "clear the marks": reset to default.
+     *
+     * The same thing the rail's Reset button does, and now literally the same
+     * action, so a key and a button that claim to do one thing cannot drift into
+     * doing two. The layout tab is the reason it needed a key at all: its rail is
+     * the page list rather than the one holding Reset, so a selection made there
+     * had no control on screen that would release it.
+     *
+     * No snapshot. Escape is a reset, not a step in a trail — recording it would
+     * put an entry in the history whose meaning is "and then everything was
+     * cleared", which is not a place anyone wants Back to return them to. Back
+     * keeps walking the selections that came before, exactly as it did.
+     */
+    escape: () => {
+        const s = get();
+        /*
+         * What is marking whatever view is on screen. Every tab has these.
+         *
+         * `reveal` as well as `reveals`, and the two are unrelated: `reveals` is
+         * revealed neighbours on the lineage canvas, `reveal` is the box the
+         * layout tab travelled to, which draws the same outline as a selection
+         * and holds it "until the next trip" by design. Clearing only the
+         * selection therefore left that outline standing with nothing on screen
+         * accounting for it, and no control anywhere that would take it down —
+         * the caption's own clear did not, because it clears the trace. The
+         * store's note about this near-collision says it is why the pair gets
+         * missed; it was missed here too.
+         */
+        const marks = {
+            selection: null, highlight: null,
+            focusRoot: null, resultSet: null, reveals: {}, reveal: null,
+        };
+        /*
+         * Scoped to the view you are looking at.
+         *
+         * The layer eyes, the resource eyes, the linked-only toggle and the
+         * rail's text box are the lineage canvas's own controls — they do not
+         * exist on the layout tab and mean nothing to it. Resetting them from
+         * over there would reach across and undo work on a view the reader is
+         * not even looking at.
+         */
+        if (s.tab !== 'lineage') return set(marks);
+        set({
+            ...marks,
+            kinds: new Set(DEFAULT_KINDS),
+            layers: new Set(s.layerOrder),
+            resources: new Set(s.allResources),
+            linkedOnly: true,          // the opening state, not "off"
+            // `treeFilter`, not `filter`: the rail's box narrows the tree only,
+            // and the near-miss cost a test that reported the box still holding
+            // what had been typed into it.
+            treeFilter: '',
+            /*
+             * Last in the object for the same reason the button does it last:
+             * the filter resets above would each clear it on their own way
+             * through, and the report opens on the question rather than on the
+             * whole graph.
+             */
+            blank: true,
+        });
+    },
+
     hasNeighbours,
 
     /** Selected node's impact, scoped to the column when one is picked. */

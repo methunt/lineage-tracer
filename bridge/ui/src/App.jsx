@@ -73,16 +73,38 @@ export default function App() {
 
     // ⌘K / Ctrl-K from anywhere, and never while the reader is typing into
     // something else — the palette owns its own Escape once open.
+    //
+    /*
+     * Escape is the rail's Reset, on a key: back to the state the report opened
+     * in, with every filter, focus and selection dropped.
+     *
+     * The page layout tab is why it has to be a key. That tab's rail is the page
+     * list rather than the one holding Reset, so a visual selected there could be
+     * left outlined with nothing on screen to release it — and "Reset layout" is
+     * not that control and never was, since it restores dragged positions and
+     * leaves the selection alone by design.
+     */
+    const escape = useStore(s => s.escape);
+    const paletteOpen = useStore(s => s.paletteOpen);
     React.useEffect(() => {
         const onKey = e => {
             if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
                 e.preventDefault();
                 setPaletteOpen(true);
+                return;
             }
+            if (e.key !== 'Escape' || paletteOpen) return;
+            /*
+             * A find box owns its own Escape: someone clearing a filter they
+             * just typed is not asking for the canvas to change underneath it.
+             */
+            const el = e.target;
+            if (el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA' || el?.isContentEditable) return;
+            escape();
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [setPaletteOpen]);
+    }, [setPaletteOpen, escape, paletteOpen]);
 
     return (
         <div className="h-full flex flex-col">
