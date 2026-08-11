@@ -50,6 +50,20 @@ for (const fixture of TABLES) {
             lineage.physicalSchema === fixture.expect.physicalSchema,
             `${lineage.physicalSchema}.${lineage.physicalTable}`);
     }
+
+    if (fixture.expect.partition) {
+        const want = fixture.expect.partition;
+        const got = (table.partitions || [])[0] || {};
+        const source = (got.source || '').trim();
+        check(`${fixture.name}: source type recorded`, got.sourceType === want.sourceType,
+            `${got.sourceType} (want ${want.sourceType})`);
+        check(`${fixture.name}: properties after the declaration still land`,
+            got.mode === want.mode, `mode ${got.mode} (want ${want.mode})`);
+        check(`${fixture.name}: the source is the source alone`,
+            source.startsWith(want.sourceStartsWith) &&
+            (want.sourceExcludes || []).every(bad => !source.includes(bad)),
+            JSON.stringify(source.slice(0, 60)));
+    }
 }
 
 // ── Dynamic text ─────────────────────────────────────────────────────────────

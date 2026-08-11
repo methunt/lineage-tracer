@@ -14,6 +14,14 @@
  * Handles: database.tmdl, model.tmdl, tables/*.tmdl, relationships.tmdl, roles/*.tmdl, expressions.tmdl
  */
 
+/*
+ * The values a partition may declare after `=` that name its source type rather
+ * than open an expression. Anything else after `=` is an expression body.
+ */
+const PARTITION_SOURCE_TYPES = new Set([
+    'm', 'calculated', 'query', 'entity', 'policyRange', 'calculationGroup', 'inferred',
+]);
+
 class TMDLParser {
     constructor() {
         this.model = {
@@ -258,6 +266,21 @@ class TMDLParser {
                     if (trimmed.includes('=')) {
                         const eqIndex = trimmed.indexOf('=');
                         const afterEq = trimmed.substring(eqIndex + 1).trim();
+                        /*
+                         * `partition X = calculated` declares a source *type*, not
+                         * an expression. Read as an expression, it swallowed every
+                         * property below it — including the `source =` marker — so
+                         * the type went unrecorded and the source arrived wrapped in
+                         * the text of its own declaration.
+                         *
+                         * Kept to partitions and to the known keywords: a one-word
+                         * value after `=` is a legitimate expression anywhere else.
+                         */
+                        if (objectType === 'partition' && PARTITION_SOURCE_TYPES.has(afterEq)) {
+                            currentObject.properties.type = afterEq;
+                            state = 'PROPERTIES';
+                            continue;
+                        }
                         if (afterEq) {
                             currentExpression.push(afterEq);
                         }
@@ -288,6 +311,26 @@ class TMDLParser {
 
             // Properties
             if (state === 'PROPERTIES' || state === 'TABLE_BODY') {
+                /*
+                 * `source =` opens an expression block, and it does so whether or
+                 * not the rest of the line happens to contain a colon. This used to
+                 * sit inside the colon branch below, which was accidentally load-
+                 * bearing: an M body opens `let Source = Sql.Database(…)` — colon in
+                 * the URL — while a calculated table's DAX has none, so a bare
+                 * `source =` was dropped along with every line under it.
+                 */
+                if (indent > baseIndent && /^(?:expression|source|sourceExpression)\s*=/.test(trimmed)) {
+                    const afterEq = trimmed.split('=').slice(1).join('=').trim();
+                    if (afterEq) {
+                        currentExpression.push(afterEq);
+                    }
+                    // Same inline fence as an object declaration: a
+                    // partition's `source = ``` ` opens the block here.
+                    if (afterEq.endsWith('```')) inBacktickBlock = true;
+                    state = 'EXPRESSION';
+                    expressionIndent = indent + 1;
+                    continue;
+                }
                 // Bare boolean flags (no colon, no value) — e.g. isHidden, isNameInferred
                 if (indent > baseIndent && /^(isHidden|isNameInferred|isKey|isNullable)$/.test(trimmed)) {
                     if (currentObject) {
@@ -298,20 +341,6 @@ class TMDLParser {
                     continue;
                 }
                 if (indent > baseIndent && trimmed.includes(':')) {
-                    // Check for 'expression =' or 'source =' which starts a new expression block
-                    if (/^(?:expression|source|sourceExpression)\s*=/.test(trimmed)) {
-                        const afterEq = trimmed.split('=').slice(1).join('=').trim();
-                        if (afterEq) {
-                            currentExpression.push(afterEq);
-                        }
-                        // Same inline fence as an object declaration: a
-                        // partition's `source = ``` ` opens the block here.
-                        if (afterEq.endsWith('```')) inBacktickBlock = true;
-                        state = 'EXPRESSION';
-                        expressionIndent = indent + 1;
-                        continue;
-                    }
-
                     const colonIndex = trimmed.indexOf(':');
                     const key = trimmed.substring(0, colonIndex).trim();
                     const value = trimmed.substring(colonIndex + 1).trim();
