@@ -411,7 +411,16 @@ function buildPbiGraph(pbip) {
      * column rename the semantic model itself performs. That one no report
      * reader ever sees; this one is the only name they *do* see.
      */
-    const aliasIndex = new Map();          // "type|table|field" -> Map(alias -> sites[])
+    /*
+     * Keyed by origin as well as by name, because one label can arrive from both
+     * at once — a parameter row captioned "Price per Unit" and a visual whose
+     * field well renames the same column to "Price per Unit" is an ordinary
+     * thing for one author to have done twice. Keyed by name alone, the two
+     * merged into a single row that credited the parameter with a rename typed
+     * into a visual, and pointed the reader at the wrong place to change it.
+     */
+    const aliasKey = (origin, alias) => `${origin} ${alias}`;
+    const aliasIndex = new Map();          // "type|table|field" -> Map(originKey -> entry)
     const renameRows = [];                 // the same facts, flat, for Diagnostics
     for (const visual of payload.visualData?.visuals || []) {
         for (const field of visual.fields || []) {
@@ -429,8 +438,11 @@ function buildPbiGraph(pbip) {
                 const key = `${field.type}|${lower(fTable)}|${lower(fName)}`;
                 if (!aliasIndex.has(key)) aliasIndex.set(key, new Map());
                 const byAlias = aliasIndex.get(key);
-                if (!byAlias.has(alias)) byAlias.set(alias, []);
-                byAlias.get(alias).push({
+                const entryKey = aliasKey('visual', alias);
+                if (!byAlias.has(entryKey)) {
+                    byAlias.set(entryKey, { name: alias, origin: 'visual', parameter: null, visuals: [] });
+                }
+                byAlias.get(entryKey).visuals.push({
                     page: visual.pageName || null,
                     visual: visual.visualName || visual.visualType || null,
                     // Role is kept because a rename on a tooltip and a rename on
@@ -442,11 +454,46 @@ function buildPbiGraph(pbip) {
         }
     }
 
+    /*
+     * A field parameter's captions belong in the same index.
+     *
+     * They are the same fact from the reader's side — a label on screen that the
+     * model has never heard of — and a reader searching one does not know which
+     * kind they have. What they need is to be told apart once found: a caption is
+     * authored once, in the model, and inherited by every visual bound to the
+     * parameter; a rename is authored in one visual and stops there. Different
+     * scope, different place to go and fix it, so each alias carries its origin.
+     */
+    for (const [key, param] of parametersByTable) {
+        const readers = [];
+        for (const visual of payload.visualData?.visuals || []) {
+            if (!(visual.fields || []).some(f => f.type === 'column' && lower(f.table) === key)) continue;
+            readers.push({
+                page: visual.pageName || null,
+                visual: visual.visualName || visual.visualType || null,
+                role: null,       // the parameter drives the well, not one role
+            });
+        }
+        for (const item of param.items) {
+            if (!item.caption || !item.targetKind || !item.homeTable) continue;
+            if (lower(item.caption) === lower(item.targetName)) continue;   // says nothing
+            const key2 = `${item.targetKind}|${lower(item.homeTable)}|${lower(item.targetName)}`;
+            if (!aliasIndex.has(key2)) aliasIndex.set(key2, new Map());
+            const byAlias = aliasIndex.get(key2);
+            const entryKey = aliasKey('parameter', item.caption);
+            if (!byAlias.has(entryKey)) {
+                byAlias.set(entryKey, {
+                    name: item.caption, origin: 'parameter', parameter: param.name, visuals: [],
+                });
+            }
+            byAlias.get(entryKey).visuals.push(...readers);
+        }
+    }
+
     /** The alias list for one field, in the shape the panel renders. */
     const aliasesFor = (type, table, name) => {
         const byAlias = aliasIndex.get(`${type}|${lower(table)}|${lower(name)}`);
-        if (!byAlias) return [];
-        return [...byAlias.entries()].map(([alias, visuals]) => ({ name: alias, visuals }));
+        return byAlias ? [...byAlias.values()] : [];
     };
 
     for (const node of Object.values(nodes)) {
@@ -719,6 +766,35 @@ function buildPbiGraph(pbip) {
              * would look identical to a report that has no renames.
              */
             fieldRenames: renameRows,
+            /*
+             * Every field parameter and every row it offers, plus the rows that
+             * point at nothing.
+             *
+             * The two are separated because only one is a defect. A row naming a
+             * field the model no longer has breaks the visual for whoever picks
+             * it in the slicer, and it breaks it silently — the report opens
+             * fine and fails on a click nobody made while testing. The listing
+             * beside it is here for the same reason the renames are: so that
+             * "this report has no parameters" and "we failed to read them" are
+             * answerable apart.
+             */
+            fieldParameters: [...parametersByTable.values()].flatMap(p =>
+                p.items.map(item => ({
+                    parameter: p.name,
+                    shownAs: item.caption,
+                    reads: item.targetTable ? `${item.targetTable}[${item.targetName}]` : item.targetName,
+                    kind: item.targetKind || 'not found',
+                    order: item.order,
+                }))),
+            fieldParametersBroken: [...parametersByTable.values()].flatMap(p =>
+                p.items.filter(item => !item.targetId).map(item => ({
+                    parameter: p.name,
+                    shownAs: item.caption,
+                    reads: item.targetTable ? `${item.targetTable}[${item.targetName}]` : item.targetName,
+                    reason: item.targetTable
+                        ? 'No column or measure of this name on that table'
+                        : 'No measure of this name in the model',
+                }))),
         },
     };
 }

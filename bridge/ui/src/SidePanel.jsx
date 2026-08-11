@@ -135,10 +135,18 @@ const Section = ({ title, count, note, children }) => (
  * a value are not equally visible to a reader, and neither this nor the reader
  * should have to guess which of the two they were shown.
  */
-const aliasTitle = alias => (alias.visuals || [])
-    .map(v => [v.visual, v.page && `on ${v.page}`, v.role && `(${v.role})`]
-        .filter(Boolean).join(' '))
-    .join('\n') || null;
+const aliasTitle = alias => [
+    /*
+     * Where the label was authored, before the list of where it shows. A caption
+     * comes from a field parameter and reaches every visual bound to it; a
+     * rename is typed into one visual's field well. A reader who cannot tell
+     * them apart cannot fix either — they are changed in different places, and
+     * changing the caption moves every chart at once.
+     */
+    alias.origin === 'parameter' ? `From the field parameter ${alias.parameter}` : 'Renamed in the visual',
+    ...(alias.visuals || []).map(v =>
+        [v.visual, v.page && `on ${v.page}`, v.role && `(${v.role})`].filter(Boolean).join(' ')),
+].join('\n');
 
 /**
  * The names this field is read under in the report.
@@ -171,25 +179,109 @@ function ShownAs({ aliases }) {
 
     return (
         <Section title="Shown as" count={aliases.length}
-            note="Renamed inside the visual. The semantic model still calls it by the name above.">
+            note="Labels this field is read under. The semantic model still calls it by the name above.">
             <div className="rounded-[var(--r-md)] border overflow-hidden"
                 style={{ borderColor: 'var(--border)' }}>
                 <table className="dt">
                     <thead>
                         <tr>
                             <th>Label</th>
+                            {/* Where the label is authored, because that is where
+                                a reader has to go to change it — and the two
+                                places have different reach. */}
+                            <th>Source</th>
                             <th className="dt-act">Visuals</th>
                         </tr>
                     </thead>
                     <tbody>
                         {rows.map(a => (
-                            <tr key={a.name} data-testid="shown-as-row">
+                            <tr key={`${a.origin}|${a.name}`} data-testid="shown-as-row">
                                 <td className="font-semibold">{a.name}</td>
+                                <td data-testid="shown-as-source"
+                                    style={{ color: 'var(--muted)' }}
+                                    title={a.origin === 'parameter'
+                                        ? 'Authored once in the field parameter, and inherited by every visual bound to it'
+                                        : 'Renamed in the field well of this visual alone'}>
+                                    {a.origin === 'parameter'
+                                        ? `${a.parameter} (parameter)`
+                                        : 'visual rename'}
+                                </td>
                                 {/* The visuals themselves stay in the tooltip:
                                     eight names is a paragraph, and the count is
                                     what the reader is scanning for. */}
                                 <td className="dt-act tnum" title={aliasTitle(a)}>
                                     {a.visuals.length}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </Section>
+    );
+}
+
+/**
+ * What a field parameter can swap in.
+ *
+ * The reader's question about a parameter is never "what DAX is this" — it is
+ * "which fields can this slicer put on the chart", and the answer is a list the
+ * DAX below states only in passing. Each row is the label the reader sees beside
+ * the field it actually reads, in the order the slicer offers them.
+ *
+ * A row that resolves to nothing is kept and marked rather than dropped: it
+ * means the parameter offers a field the model no longer has, which breaks the
+ * visual for whoever picks it, and a silently shorter list hides that.
+ */
+function SwapsBetween({ parameter }) {
+    const items = parameter?.items || [];
+    if (!items.length) {
+        return (
+            <Section title="Swaps between" count={0}
+                note="A field parameter with no rows: the slicer offers nothing.">
+                <div style={{ color: 'var(--muted)' }}>No fields are listed.</div>
+            </Section>
+        );
+    }
+    // Slicer order, because that is the order the reader sees. Rows written
+    // without one sort last rather than jumping to the front on a null.
+    const rows = [...items].sort((a, b) =>
+        (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER));
+
+    return (
+        <Section title="Swaps between" count={items.length}
+            note="Each label the slicer offers, and the field it reads. Renaming a label here changes every visual bound to this parameter.">
+            <div className="rounded-[var(--r-md)] border overflow-hidden"
+                style={{ borderColor: 'var(--border)' }}>
+                <table className="dt">
+                    <thead>
+                        <tr>
+                            <th>Label</th>
+                            <th>Reads</th>
+                            <th className="dt-act">Kind</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.map(item => (
+                            <tr key={`${item.order}|${item.caption}`} data-testid="swaps-row">
+                                <td className="font-semibold">
+                                    {item.caption}
+                                    {item.group && (
+                                        <span style={{ color: 'var(--muted)' }}> · {item.group}</span>
+                                    )}
+                                </td>
+                                <td className="mono" style={{ overflowWrap: 'anywhere' }}>
+                                    {item.targetTable
+                                        ? `${item.targetTable}[${item.targetName}]`
+                                        : item.targetName}
+                                </td>
+                                {/* The one row that needs saying out loud is the
+                                    one pointing at nothing — the slicer offers a
+                                    field the model does not have. */}
+                                <td className="dt-act"
+                                    style={{ color: item.targetKind ? 'var(--muted)' : 'var(--bad)' }}
+                                    title={item.targetKind ? undefined : 'Nothing in the model answers to this name'}>
+                                    {item.targetKind || 'not found'}
                                 </td>
                             </tr>
                         ))}
@@ -220,6 +312,13 @@ function chipsFor(node) {
     const out = [];
     if (node.origin === 'pbi') {
         if (node.kind === 'pbiTable') {
+            /*
+             * First chip, and in the accent: a field parameter is not a table of
+             * data, and every other fact on this card — storage mode, column
+             * count — reads as if it were. Without it a reader has to recognise
+             * the shape from the DAX further down the panel.
+             */
+            if (m.fieldParameter) out.push(['field parameter', 'var(--accent)']);
             out.push([m.storageMode || 'import', null]);
             if (m.columnCount != null) out.push([`${m.columnCount} columns`, null]);
             if (m.measureCount) out.push([`${m.measureCount} measures`, null]);
@@ -236,6 +335,15 @@ function chipsFor(node) {
             out.push([m.visualType || 'visual', null]);
             const fields = node.definition?.fields?.length;
             if (fields) out.push([`${fields} field${fields === 1 ? '' : 's'}`, null]);
+            /*
+             * A visual driven by a parameter reads whatever the reader picked,
+             * and the field list below shows only what was showing when the
+             * report was saved. Saying so here is the difference between a field
+             * list that is wrong and one that is a snapshot.
+             */
+            for (const p of m.fieldParameters || []) {
+                out.push([p.selected ? `${p.table}: ${p.selected}` : p.table, 'var(--accent)']);
+            }
         }
         return out;
     }
@@ -803,7 +911,9 @@ function Definition({ node }) {
     if (d.m) blocks.push(['M (as authored)', d.m]);
     if (d.mInlined) blocks.push(['M (source function resolved by lineage-bridge)', d.mInlined]);
 
-    if (!blocks.length && !d.fields?.length && !aliases.length) {
+    const parameter = node.meta?.fieldParameter || null;
+
+    if (!blocks.length && !d.fields?.length && !aliases.length && !parameter) {
         return (
             <div className="flex items-center gap-2" style={{ color: 'var(--muted)' }}>
                 <IconCode size="sm" /> No definition available for this node.
@@ -817,6 +927,9 @@ function Definition({ node }) {
                     <FieldsUsed fields={d.fields} />
                 </Section>
             )}
+            {/* Above the DAX, for the same reason the labels are: the list is the
+                answer, and the expression is the evidence for it. */}
+            {parameter && <SwapsBetween parameter={parameter} />}
             {/* Above the DAX: the name a reader complained about is how they got
                 here, so it should not be below a block of code they have to
                 scroll past to confirm they are in the right place. */}

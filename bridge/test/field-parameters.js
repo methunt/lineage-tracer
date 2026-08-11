@@ -370,6 +370,56 @@ check('the visual records that a parameter drives it',
 check('and which row was showing when the report was saved',
     shown[0]?.selected === 'Alpha', String(shown[0]?.selected));
 
+/*
+ * The caption, as a name the field is read under.
+ *
+ * A row's caption is authored in the model and shown in the slicer, so it is
+ * frequently the only name a reader can quote back — and it is nothing like the
+ * name of the field behind it. It belongs in the same index as a rename made
+ * inside a visual, because a reader searching a label does not know, and should
+ * not have to know, which of the two they are looking at.
+ *
+ * What they do need is to be told apart once found: a caption is authored once
+ * and inherited by every visual on the parameter, a rename is authored per
+ * visual, and the two are fixed in different places.
+ */
+const dimCol = (g.nodes['pbi:table:t_dim']?.columns || []).find(c => c.name === 'colA');
+check('a caption is recorded on the column it names',
+    (dimCol?.aliases || []).some(a => a.name === 'Alpha'),
+    JSON.stringify(dimCol?.aliases || []));
+check('and on the measure, when the row names a measure',
+    (g.nodes['pbi:measure:t_metrics[mTotal]']?.meta?.aliases || []).some(a => a.name === 'Gamma'),
+    JSON.stringify(g.nodes['pbi:measure:t_metrics[mTotal]']?.meta?.aliases || []));
+check('a caption says where it comes from',
+    (dimCol?.aliases || []).find(a => a.name === 'Alpha')?.origin === 'parameter' &&
+    (dimCol?.aliases || []).find(a => a.name === 'Alpha')?.parameter === 'Chooser',
+    JSON.stringify((dimCol?.aliases || []).find(a => a.name === 'Alpha')));
+check('and it names the visuals that read the field under it',
+    ((dimCol?.aliases || []).find(a => a.name === 'Alpha')?.visuals || []).length === 1);
+
+/*
+ * One label, both origins. An author who captions a parameter row "Alpha" and
+ * also renames the same column to "Alpha" in a visual's field well has done
+ * something entirely ordinary twice — and indexed by label alone the two merged
+ * into one row that credited the parameter with the rename, sending the reader
+ * to the wrong place to change it.
+ */
+{
+    const p = graphPayload();
+    p.payload.visualData.visuals[0].fields.push({
+        type: 'column', table: 't_dim', name: 'colA', role: 'Y', displayNames: ['Alpha'],
+    });
+    const g2 = buildPbiGraph(p);
+    const both = (g2.nodes['pbi:table:t_dim']?.columns || [])
+        .find(c => c.name === 'colA')?.aliases || [];
+    check('the same label from both origins stays two rows', both.length === 2,
+        JSON.stringify(both.map(a => `${a.name}/${a.origin}`)));
+    check('and each keeps its own origin',
+        both.some(a => a.origin === 'parameter' && a.parameter === 'Chooser') &&
+        both.some(a => a.origin === 'visual' && !a.parameter),
+        JSON.stringify(both.map(a => `${a.origin}:${a.parameter}`)));
+}
+
 // A visual with no parameter must gain nothing, so no caller has to ask.
 check('an ordinary visual is left alone',
     g.nodes[V] && !('fieldParameters' in (g.nodes['pbi:page:p1']?.meta || {})));
