@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 164"
-     width="1200" height="164" role="img" aria-label="The four files it needs">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 98"
+     width="1200" height="98" role="img" aria-label="The four files it needs">
   <style>
     .rise  { animation: rise .55s cubic-bezier(.2,.7,.3,1) both; }
     @keyframes rise { from { transform: translateY(9px) } to { transform: translateY(0) } }
@@ -10,17 +10,13 @@
       <stop offset="100%" stop-color="#4f46e5" stop-opacity="0"/>
     </linearGradient>
   </defs>
-  <rect width="1200" height="164" rx="12" fill="#F6F8FA"/>
-  <rect width="1200" height="164" rx="12" fill="url(#w)"/>
-  <rect width="6" height="164" rx="3" fill="#4f46e5"/>
+  <rect width="1200" height="98" rx="12" fill="#F6F8FA"/>
+  <rect width="1200" height="98" rx="12" fill="url(#w)"/>
+  <rect width="6" height="98" rx="3" fill="#4f46e5"/>
   <g class="rise">
-  <text x="40" y="42" font-family="ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',monospace" font-size="17" font-weight="700"
-        letter-spacing="1.6" fill="#4f46e5">PART 1</text>
-  <text x="40" y="78" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="29"
-        font-weight="700" fill="#1F2328" letter-spacing="-0.4">The four files it needs</text>
-  <text x="40" y="108" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="17.5"
+  <text x="40" y="42" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="17.5"
         fill="#656D76">manifest.json, catalog.json, a mapping file and the PBIP project folder. All four are required — Build lineage stays</text>
-  <text x="40" y="134" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="17.5"
+  <text x="40" y="68" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="17.5"
         fill="#656D76">disabled until every slot is filled.</text>
   </g>
 </svg>

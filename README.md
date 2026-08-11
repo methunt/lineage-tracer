@@ -1,7 +1,9 @@
 <div align="center">
 
 <!-- HOSTED-URL:START — replace every occurrence of the placeholder below with the GitHub Pages URL -->
-<a href="https://methunt.github.io/lineage-tracer/">
+<h1>Lineage Tracer</h1>
+
+<a href="https://methunt.github.io/lineage-tracer/" target="_blank" rel="noopener noreferrer">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/hero-dark.svg">
     <img alt="Lineage Tracer — trace a column from the dbt model that builds it to the Power BI visual that renders it, through Power Query renames, measures and calculation groups." src="assets/hero-light.svg">
@@ -37,9 +39,9 @@
 
 <div align="center">
 
-<!-- DEMO:START — replace with the recorded walkthrough (GIF or MP4) once captured -->
+<!-- DEMO:START -->
 
-**▶️ See it in motion** — _walkthrough recording goes here._
+![Lineage Tracer walkthrough — uploading the four sample input files, building the graph, and exploring impact by clicking nodes](assets/demo-walkthrough.gif)
 
 <!-- DEMO:END -->
 
@@ -48,7 +50,7 @@
 <div align="center">
 
 <!-- HOSTED-URL:START -->
-<a href="https://methunt.github.io/lineage-tracer/">
+<a href="https://methunt.github.io/lineage-tracer/" target="_blank" rel="noopener noreferrer">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/cta-dark.svg">
     <img alt="Open Lineage Tracer — runs in your browser, no account, nothing is uploaded" src="assets/cta-light.svg" width="660">
@@ -62,12 +64,10 @@
 
 <a id="-start"></a>
 
-<br>
+<h2>Where to start</h2>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/section-start-dark.svg">
-  <img alt="Where to start — four ways in, depending on what you came for." src="assets/section-start-light.svg">
-</picture>
+<img alt="Where to start — four ways in, depending on what you came for." src="assets/section-start-light.svg">
+
 
 <br>
 
@@ -92,12 +92,9 @@
 
 <a id="-problems"></a>
 
-<br>
+<h2>The gap between two good tools</h2>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/section-problem-dark.svg">
   <img alt="The problem — dbt and Power BI each stop at the warehouse boundary, the one place a column's story crosses systems." src="assets/section-problem-light.svg">
-</picture>
 
 <br>
 
@@ -118,10 +115,10 @@ crossed by hand.
 
 <a id="-who"></a>
 
-<br>
+<h2>Who this is for</h2>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/section-who-dark.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/section-who-light.svg">
   <img alt="Who this is for — analytics engineers, BI developers, data platform leads and reviewers." src="assets/section-who-light.svg">
 </picture>
 
@@ -138,10 +135,10 @@ crossed by hand.
 
 <a id="-part-1"></a>
 
-<br>
+<h2>Part 1 — The four files it needs</h2>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/section-inputs-dark.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/section-inputs-light.svg">
   <img alt="Part 1 — the four files it needs: manifest.json, catalog.json, a mapping file and the PBIP project folder. All four are required; Build lineage stays disabled until every slot is filled." src="assets/section-inputs-light.svg">
 </picture>
 
@@ -176,10 +173,10 @@ crossed by hand.
 
 <a id="-part-2"></a>
 
-<br>
+<h2>Part 2 — The mapping file</h2>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/section-mapping-dark.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/section-mapping-light.svg">
   <img alt="Part 2 — the mapping file: the one input no parsing can replace. Every declared link between a dbt column and a semantic model column lives here — renames, native SQL sources, an intervening view. Required, always." src="assets/section-mapping-light.svg">
 </picture>
 
@@ -226,10 +223,10 @@ you can see on the canvas which one you are looking at.
 
 <a id="-wired"></a>
 
-<br>
+<h2>How it is wired</h2>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/section-wired-dark.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/section-wired-light.svg">
   <img alt="How it is wired — what parses what, where it runs, and which links are declared versus derived." src="assets/section-wired-light.svg">
 </picture>
 
@@ -250,10 +247,10 @@ to the warehouse relation it names and matches that against what dbt builds.
 
 <a id="-part-3"></a>
 
-<br>
+<h2>Part 3 — The lineage canvas</h2>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/section-lineage-dark.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/section-lineage-light.svg">
   <img alt="Part 3 — the lineage canvas: one left-to-right DAG in swimlanes from dbt sources through to Power BI visuals, where table nodes expand to their columns and selecting a column dims everything except its path." src="assets/section-lineage-light.svg">
 </picture>
 
@@ -280,10 +277,10 @@ to the warehouse relation it names and matches that against what dbt builds.
 
 <a id="-part-4"></a>
 
-<br>
+<h2>Part 4 — Impact analysis</h2>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/section-impact-dark.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/section-impact-light.svg">
   <img alt="Part 4 — impact analysis: blast radius is exact graph traversal and always shown with raw counts; a BROKEN chip appears only where the artifacts prove it, and there is no heuristic CRITICAL." src="assets/section-impact-light.svg">
 </picture>
 
@@ -307,10 +304,10 @@ how a lineage tool loses its reader.
 
 <a id="-part-5"></a>
 
-<br>
+<h2>Part 5 — Page layout</h2>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/section-layout-dark.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/section-layout-light.svg">
   <img alt="Part 5 — page layout: the affected visuals drawn as wireframe boxes, in place on the report pages they live on." src="assets/section-layout-light.svg">
 </picture>
 
@@ -337,10 +334,10 @@ on an empty state is worse than no tab.
 
 <a id="-part-6"></a>
 
-<br>
+<h2>Part 6 — Diagnostics</h2>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/section-diagnostics-dark.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/section-diagnostics-light.svg">
   <img alt="Part 6 — diagnostics: eleven sections of everything that did not link, graded error, warning or info, each row linking back into the graph." src="assets/section-diagnostics-light.svg">
 </picture>
 
@@ -372,10 +369,10 @@ back `database.schema.table` → `schema.table` → `table`, and says when it di
 
 <a id="-export"></a>
 
-<br>
+<h2>One file you can email</h2>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/section-export-dark.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/section-export-light.svg">
   <img alt="Export — one self-contained HTML file you can email, with the data baked in." src="assets/section-export-light.svg">
 </picture>
 
@@ -390,11 +387,11 @@ never heard of this tool.
 
 <a id="-why"></a>
 
-<br>
+<h2>Why this tool</h2>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/section-why-dark.svg">
-  <img alt="Why this tool — what it does that a dbt lineage graph and a Power BI lineage view cannot." src="assets/section-why-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/section-why-light.svg">
+  <img alt="Why this tool — what it does that a dbt lineage graph and a other lineage view cannot." src="assets/section-why-light.svg">
 </picture>
 
 <br>
@@ -414,14 +411,7 @@ never heard of this tool.
 
 <a id="-faq"></a>
 
-<br>
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/section-faq-dark.svg">
-  <img alt="FAQ — what it needs, what it does with it, and what happens to your files." src="assets/section-faq-light.svg">
-</picture>
-
-<br>
+<h2>Questions people ask first</h2>
 
 <details>
 <summary><b>Do I really need all four files?</b></summary>
@@ -494,10 +484,10 @@ should never look the same on screen, and where both exist the declared row wins
 
 <a id="-reference"></a>
 
-<br>
+<h2>Gotchas, privacy and licences</h2>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/section-reference-dark.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/section-reference-light.svg">
   <img alt="Reference — gotchas, privacy and licences. Everything below is reference: what will bite you, what the tool deliberately does not protect against, and who owns the vendored code." src="assets/section-reference-light.svg">
 </picture>
 
@@ -585,7 +575,7 @@ visibility, visual geometry. They stay MIT.
 <div align="center">
 
 <!-- HOSTED-URL:START -->
-**[Open Lineage Tracer →](https://methunt.github.io/lineage-tracer/)**
+<a href="https://methunt.github.io/lineage-tracer/" target="_blank" rel="noopener noreferrer"><strong>Open Lineage Tracer →</strong></a>
 <!-- HOSTED-URL:END -->
 
 [![Open it](https://img.shields.io/badge/open-Lineage%20Tracer-4f46e5?style=for-the-badge)](#-start)
