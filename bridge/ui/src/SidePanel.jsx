@@ -152,21 +152,50 @@ const aliasTitle = alias => (alias.visuals || [])
  */
 function ShownAs({ aliases }) {
     if (!aliases?.length) return null;
+    /*
+     * The same table the Diagnostics tab draws, in a framed box like the column
+     * list above it. Header row and underlines alone read as a list; the ruled,
+     * striped rows are what make two columns legible as a pair.
+     *
+     * The labels are unquoted. The quotes were doing a job the layout does
+     * better — marking the cell as something a person typed rather than an
+     * identifier out of the model — and a column headed "Label" says that
+     * already, where punctuation inside the cell only competes with the words it
+     * wraps.
+     */
+    const rows = [...aliases].sort((a, b) =>
+        // Widest reach first. The order labels happen to appear in the report
+        // file is not a fact about anything, and the one used in most visuals is
+        // the one a reader is most likely to have been quoted.
+        b.visuals.length - a.visuals.length || a.name.localeCompare(b.name));
+
     return (
         <Section title="Shown as" count={aliases.length}
             note="Renamed inside the visual. The semantic model still calls it by the name above.">
-            {aliases.map(a => (
-                <div key={a.name} data-testid="shown-as-row"
-                    className="flex items-baseline gap-2 py-1.5"
-                    style={{ borderTop: '1px solid var(--border)' }}>
-                    <span className="font-semibold" style={{ overflowWrap: 'anywhere' }}>“{a.name}”</span>
-                    <span className="flex-1" />
-                    <span className="flex-none tnum" style={{ color: 'var(--muted)', fontSize: 'var(--fs-sm)' }}
-                        title={aliasTitle(a)}>
-                        {a.visuals.length} visual{a.visuals.length === 1 ? '' : 's'}
-                    </span>
-                </div>
-            ))}
+            <div className="rounded-[var(--r-md)] border overflow-hidden"
+                style={{ borderColor: 'var(--border)' }}>
+                <table className="dt">
+                    <thead>
+                        <tr>
+                            <th>Label</th>
+                            <th className="dt-act">Visuals</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.map(a => (
+                            <tr key={a.name} data-testid="shown-as-row">
+                                <td className="font-semibold">{a.name}</td>
+                                {/* The visuals themselves stay in the tooltip:
+                                    eight names is a paragraph, and the count is
+                                    what the reader is scanning for. */}
+                                <td className="dt-act tnum" title={aliasTitle(a)}>
+                                    {a.visuals.length}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </Section>
     );
 }

@@ -577,7 +577,8 @@ async function buildSampleReport() {
      * opening everything would bury the thing just traced. With nothing
      * selected there is no path to respect, so it opens what is on canvas.
      */
-    const openCards = () => page.locator('.node-card button[aria-expanded="true"]').count();
+    const openCards = () => page
+        .locator('.node-card button[aria-expanded="true"]:not([aria-haspopup])').count();
     const expandAll = page.locator('[data-testid="expand-all"]');
 
     // No selection first: it also leaves the canvas fully collapsed, which the
@@ -589,7 +590,15 @@ async function buildSampleReport() {
     await expandAll.click();
     await page.waitForTimeout(1200);
     const openedAll = await openCards();
-    const withColumns = await page.locator('.node-card button[aria-expanded]').count();
+    /*
+     * Column chevrons only. The hop `+` button carries `aria-expanded` too —
+     * correctly, for its own dropdown menu, which is closed — and counting those
+     * as unopened column lists failed the check on any canvas where a card had
+     * hidden neighbours to offer. Expand-all targets cards that have columns, so
+     * that is what this has to count.
+     */
+    const withColumns = await page
+        .locator('.node-card button[aria-expanded]:not([aria-haspopup])').count();
     check('expand-all with no selection opens everything on canvas',
         openedAll > 0 && openedAll === withColumns,
         `${openedAll} of ${withColumns} cards with columns`);

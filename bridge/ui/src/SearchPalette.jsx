@@ -214,25 +214,45 @@ export default function SearchPalette() {
             if (tags.size && !row.tags.some(t => tags.has(t))) continue;
             if (needle) {
                 const hay = row.label.toLowerCase();
-                if (hay.includes(needle)) {
-                    // Prefix matches first, then shorter names: `Region` should not put
+                /*
+                 * Four bands, and the split that carries the weight is
+                 * prefix-versus-substring, not real-name-versus-label.
+                 *
+                 * Ranking every real-name substring above every label sounded
+                 * right and behaved badly: `Total` is a fragment of seventeen
+                 * unrelated column names on a real project, so the measure a
+                 * reader had actually been sent to find — the one whose label
+                 * *is* `Total` — sorted to row eighteen, below the fold of a
+                 * list that shows fourteen. The feature looked broken to the
+                 * only person it exists for.
+                 *
+                 * A name that starts with what you typed still wins: when both
+                 * match equally well the model's own name is the stronger
+                 * signal. A name that merely contains it does not.
+                 */
+                if (hay.startsWith(needle)) {
+                    // Then shorter names: `Region` should not put
                     // `RegionCategoryGlobalKey` above `Region`.
-                    out.push([hay.startsWith(needle) ? 0 : 1, row.label.length, row]);
+                    out.push([0, row.label.length, row]);
                     continue;
                 }
                 /*
-                 * Then the names the report renamed it to. Ranked below every
-                 * real-name match, because the model's own name is the stronger
-                 * signal — someone typing a word that is also a real measure
-                 * name wants that measure before one merely labelled that way in
-                 * a card. The matched alias rides on a copy of the
-                 * row: the index is memoised and shared, and writing the match
-                 * onto it would leak one query's alias into the next.
+                 * A matched label rides on a copy of the row: the index is
+                 * memoised and shared, and writing the match onto it would leak
+                 * one query's alias into the next.
                  */
-                const alias = row.aliases?.find(a => a.toLowerCase().includes(needle));
-                if (!alias) continue;
-                const rank = alias.toLowerCase().startsWith(needle) ? 2 : 3;
-                out.push([rank, row.label.length, { ...row, matchedAlias: alias }]);
+                const alias = row.aliases?.find(a => a.toLowerCase().startsWith(needle));
+                if (alias) {
+                    out.push([1, row.label.length, { ...row, matchedAlias: alias }]);
+                    continue;
+                }
+                if (hay.includes(needle)) {
+                    out.push([2, row.label.length, row]);
+                    continue;
+                }
+                const within = row.aliases?.find(a => a.toLowerCase().includes(needle));
+                if (!within) continue;
+                out.push([3, row.label.length, { ...row, matchedAlias: within }]);
             } else {
                 out.push([1, row.label.length, row]);
             }
