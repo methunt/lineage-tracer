@@ -1,0 +1,80 @@
+{
+    "visual": {
+        "visualType": "columnChart",
+        "visualContainerObjects": {
+            "title": [
+                {
+                    "properties": {
+                        "text": {
+                            "expr": {
+                                "Literal": {
+                                    "Value": "'Chosen Metric by Month'"
+                                }
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "query": {
+            "queryState": {
+                "Category": {
+                    "projections": [
+                        {
+                            "field": {
+                                "Column": {
+                                    "Expression": {
+                                        "SourceRef": {
+                                            "Entity": "Date"
+                                        }
+                                    },
+                                    "Property": "Month"
+                                }
+                            },
+                            "queryRef": "Date.Month"
+                        }
+                    ]
+                },
+                "Y": {
+                    "projections": [
+                        {
+                            "field": {
+                                "Measure": {
+                                    "Expression": {
+                                        "SourceRef": {
+                                            "Entity": "Sales"
+                                        }
+                                    },
+                                    "Property": "Total Revenue"
+                                }
+                            },
+                            "queryRef": "Sales.Total Revenue"
+                        }
+                    ],
+                    "fieldParameters": [
+                        {
+                            "parameterExpr": {
+                                "Column": {
+                                    "Expression": {
+                                        "SourceRef": {
+                                            "Entity": "Metric Chooser"
+                                        }
+                                    },
+                                    "Property": "Metric Chooser"
+                                }
+                            },
+                            "index": 0,
+                            "length": 1
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "position": {
+        "x": 50,
+        "y": 250,
+        "width": 400,
+        "height": 200
+    }
+}

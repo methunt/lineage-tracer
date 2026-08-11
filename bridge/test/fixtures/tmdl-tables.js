@@ -86,4 +86,45 @@ ${TABS}${TABS}formatString: #,0
             columns: [],
         },
     },
+    /*
+     * The declaration form of a partition's source type: `partition X = calculated`
+     * rather than the colon form `type: calculated`. Power BI Desktop writes this
+     * one, and the parser read the `=` as the start of an expression — so the
+     * properties that follow (`mode`, and the `source =` marker itself) were
+     * swallowed into the expression text, and the source type was never recorded.
+     *
+     * Both halves are load-bearing. Consumers gate calculated-table lineage on
+     * `sourceType === 'calculated'`, so a missing type means no lineage at all;
+     * and a `source` that opens with the wrapper text instead of the DAX means
+     * every consumer has to strip a prefix it should never have seen.
+     */
+    {
+        name: 'a partition declaring its type on the declaration line',
+        file: 'tables/Derived.tmdl',
+        tmdl: `table Derived
+
+${TABS}column Label
+${TABS}${TABS}dataType: string
+
+${TABS}partition Derived = calculated
+${TABS}${TABS}mode: import
+${TABS}${TABS}source =
+${TABS}${TABS}${TABS}${TABS}SUMMARIZE (
+${TABS}${TABS}${TABS}${TABS}    'Facts',
+${TABS}${TABS}${TABS}${TABS}    'Facts'[Label]
+${TABS}${TABS}${TABS}${TABS})
+`,
+        expect: {
+            table: 'Derived',
+            measures: [],
+            columns: ['Label'],
+            partition: {
+                sourceType: 'calculated',
+                mode: 'import',
+                // The DAX, and nothing but the DAX.
+                sourceStartsWith: 'SUMMARIZE',
+                sourceExcludes: ['mode:', 'source ='],
+            },
+        },
+    },
 ];

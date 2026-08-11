@@ -39,6 +39,26 @@ const SECTIONS = [
         ],
     },
     {
+        /*
+         * Beside the broken references, because it is the same defect one step
+         * further in — and it hides better. A broken reference shows a visual
+         * that cannot render; this one renders perfectly on whichever row is
+         * selected and fails only for the reader who picks the missing one.
+         */
+        key: 'fieldParametersBroken', title: 'Field parameters offering a field that is gone',
+        severity: 'error',
+        hint: 'The row names a measure or column the semantic model does not have. '
+            + 'Nothing warns at open time — the visual breaks for whoever chooses this '
+            + 'label in the slicer.',
+        cols: [
+            ['Parameter', r => r.parameter, { mono: true, width: '20%' }],
+            ['Shown as', r => r.shownAs, { width: '20%' }],
+            ['Reads', r => r.reads, { mono: true }],
+            ['Why', r => r.reason, { muted: true }],
+        ],
+        link: r => `pbi:table:${r.parameter}`,
+    },
+    {
         key: 'relationshipKeysUnlinked', title: 'Join keys with no dbt column behind them',
         severity: 'error',
         hint: 'The table resolves to a warehouse relation but this key did not match a dbt column. Unlike a broken visual, a broken join raises no error — the report keeps rendering, with different numbers.',
@@ -117,6 +137,23 @@ const SECTIONS = [
             ['Shown as', r => r.shownAs, { width: '20%' }],
             ['Role', r => r.role, { width: '7rem', muted: true }],
         ],
+    },
+    {
+        key: 'fieldParameters', title: 'Fields a parameter can swap in',
+        // Context, not a worklist — and the same reason the renames are listed:
+        // without it, "this report has no parameters" and "we could not read
+        // them" look identical from the outside.
+        severity: 'info',
+        hint: 'A field parameter lets a reader change what a visual reads. Every label '
+            + 'here is authored in the model and inherited by every visual bound to the '
+            + 'parameter, so the field a visual shows is the reader\'s choice, not the file\'s.',
+        cols: [
+            ['Parameter', r => r.parameter, { mono: true, width: '20%' }],
+            ['Shown as', r => r.shownAs, { width: '20%' }],
+            ['Reads', r => r.reads, { mono: true }],
+            ['Kind', r => r.kind, { width: '7rem', muted: true }],
+        ],
+        link: r => `pbi:table:${r.parameter}`,
     },
     {
         key: 'dbtNodesNotUsed', title: 'This report does not read these tables',
@@ -227,12 +264,14 @@ export default function Diagnostics() {
                   * Stacked one per row, a report with three findings and eight
                   * "none"s made the reader scroll past eight reassurances to
                   * reach them, on a page two thirds of which was empty margin.
-                  * Cards are packed masonry-style into columns rather than laid
-                  * out in grid rows: a grid row is as tall as its tallest card,
-                  * which left a one-row section standing beside a wall of empty
-                  * space. The column count follows a minimum width rather than a
+                  * The column count follows a minimum width rather than a
                   * breakpoint, so a narrow window gets one column, and a section
                   * with wide rows still claims the full width.
+                  *
+                  * Cards in a row share an edge — see `.dt-grid`. They were
+                  * packed masonry-style before, which ended every card at a
+                  * different height and, around a full-width section, left a
+                  * ragged gap that read as a bug rather than as a tight pack.
                   */}
                 {clean.length > 0 && (
                     <div className="dt-clean-strip">

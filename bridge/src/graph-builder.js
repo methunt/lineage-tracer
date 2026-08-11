@@ -74,6 +74,8 @@ function buildGraph({ dbtGraph, pbiGraph, pbip, mapping, layerOrder }) {
         modelTablesWithoutSource: [],
         brokenRefs: (pbiGraph.stats.brokenRefs || []).map(normaliseBrokenRef),
         fieldRenames: [...(pbiGraph.stats.fieldRenames || [])],
+        fieldParameters: [...(pbiGraph.stats.fieldParameters || [])],
+        fieldParametersBroken: [...(pbiGraph.stats.fieldParametersBroken || [])],
         modelColumnsUnlinked: [],
         relationshipKeysUnlinked: [],
         multiSourceColumns: [],
@@ -812,7 +814,11 @@ function summarise(nodes, crossing, diagnostics, impact) {
             diagnostics.unresolvedMappingRows.length +
             diagnostics.modelTablesWithoutSource.length +
             diagnostics.brokenRefs.length +
-            diagnostics.relationshipKeysUnlinked.length,
+            diagnostics.relationshipKeysUnlinked.length +
+            // A parameter row naming a field that is gone breaks the visual for
+            // whoever picks it, and breaks it on a click nobody made while
+            // testing. The listing beside it is context and is not counted.
+            diagnostics.fieldParametersBroken.length,
     };
 }
 

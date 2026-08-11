@@ -60,6 +60,13 @@ function check(name, pass, detail) {
     console.log('\n— renames —');
     failures += require('./renames').failures;
 
+    // Field parameters, on synthetic models: the cases that decide whether a
+    // measure reached only through a parameter is seen at all are the near
+    // misses — a target named without quotes, a marker with no rows behind it,
+    // rows with no marker — and no one project holds them all.
+    console.log('\n— field parameters —');
+    failures += require('./field-parameters').failures;
+
     // The folder tree, on a synthetic project: samples/ is flat and the
     // real projects nest several folders deep, so neither exercises collapsing a
     // single-child chain or a folder holding both files and subfolders.

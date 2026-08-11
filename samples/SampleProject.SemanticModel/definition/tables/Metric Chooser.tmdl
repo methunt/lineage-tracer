@@ -1,0 +1,37 @@
+/// A field parameter: the reader chooses which field the chart reads.
+/// Three rows resolve and one does not, which is the state that breaks a
+/// visual for whoever picks it and warns nobody at open time.
+table 'Metric Chooser'
+
+	column 'Metric Chooser'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: [Value1]
+		sortByColumn: 'Metric Chooser Order'
+
+	column 'Metric Chooser Fields'
+		isHidden
+		dataType: string
+		summarizeBy: none
+		sourceColumn: [Value2]
+
+		extendedProperty ParameterMetadata =
+				{
+				  "version": 3,
+				  "kind": 2
+				}
+
+	column 'Metric Chooser Order'
+		isHidden
+		dataType: int64
+		sourceColumn: [Value3]
+
+	partition 'Metric Chooser' = calculated
+		mode: import
+		source =
+				{
+				    ("Total Sales", NAMEOF([Total Revenue]), 0),
+				    ("Orders", NAMEOF([Order Count]), 1),
+				    ("Price per Unit", NAMEOF('Sales'[UnitPrice]), 2),
+				    ("Margin", NAMEOF([Gross Margin]), 3)
+				}

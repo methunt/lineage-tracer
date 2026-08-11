@@ -280,10 +280,25 @@ async function buildSampleReport() {
     await page.waitForTimeout(1400);
 
     const shownAs = await page.locator('[data-testid="shown-as-row"]').allInnerTexts();
+    /*
+     * Three labels from two places: two typed into field wells, and one authored
+     * as a field parameter's caption. The reader needs all of them — fixing the
+     * two visuals and leaving the parameter fixes two charts out of three.
+     */
     check('the measure lists every label it is read under',
-        shownAs.length === 2
-        && shownAs.join(' ').includes('Grand Total') && shownAs.join(' ').includes('Revenue'),
+        shownAs.length === 3
+        && ['Grand Total', 'Revenue', 'Total Sales'].every(l => shownAs.join(' ').includes(l)),
         shownAs.map(r => r.replace(/\n/g, ' ')).join(' / '));
+    /*
+     * And says which is which. A caption is authored once and reaches every
+     * visual on the parameter; a rename stops at one visual. Told apart wrongly,
+     * a reader changes the caption expecting to move one chart and moves eight.
+     */
+    const sources = await page.locator('[data-testid="shown-as-source"]').allInnerTexts();
+    check('and says where each label is authored',
+        sources.filter(s => /parameter/.test(s)).length === 1
+        && sources.filter(s => /visual rename/.test(s)).length === 2,
+        sources.join(' / '));
 
     /*
      * And on the visual: the label beside the model's name, not instead of it.
@@ -1342,6 +1357,42 @@ async function buildSampleReport() {
     check('diagnostics tab renders', /Mapping rows that could not be resolved/i.test(diag));
 
     /*
+     * Cards sharing a row share a bottom edge.
+     *
+     * Only a layout engine can answer this, and it regresses silently: the page
+     * still renders, still lists every finding, and simply looks broken. The
+     * measurement is the geometry rather than the CSS, so it survives whichever
+     * mechanism produces it.
+     *
+     * The horizontal test rides along because it has the same cause and the same
+     * invisibility from the data — a long identifier in a cell used to set the
+     * card's min-content width and push a table out past its own border.
+     */
+    const cardRows = await page.$$eval('[data-testid="diagnostics"] .dt-card', els => {
+        const rows = new Map();
+        let escaped = 0;
+        for (const el of els) {
+            const r = el.getBoundingClientRect();
+            const t = el.querySelector('table.dt');
+            if (t && Math.round(t.getBoundingClientRect().width) > Math.round(r.width)) escaped++;
+            // Bucketed, because two cards in a row start within a pixel of each
+            // other rather than at exactly the same y.
+            const key = Math.round(r.top / 8);
+            if (!rows.has(key)) rows.set(key, []);
+            rows.get(key).push(Math.round(r.bottom));
+        }
+        const spreads = [...rows.values()]
+            .filter(g => g.length > 1)
+            .map(g => Math.max(...g) - Math.min(...g));
+        return { spreads, escaped, cards: els.length };
+    });
+    check('diagnostics cards in a row end at the same height',
+        cardRows.cards > 0 && cardRows.spreads.every(s => s <= 1),
+        `${cardRows.cards} cards, ${cardRows.spreads.length} shared rows, spreads [${cardRows.spreads.join(', ')}]`);
+    check('and no table escapes the card it sits in',
+        cardRows.escaped === 0, `${cardRows.escaped} overflowing`);
+
+    /*
      * A diagnostics row is a way onto the canvas, and Back has to be a way out
      * of it: the row leaves a focus pin and a trace behind, and reconstructing
      * "the list I was reading" by hand is the cost Back exists to remove.
@@ -1383,6 +1434,98 @@ async function buildSampleReport() {
     check('dbt cards carry a test count', badges.total > 0 && badges.tested > 0,
         `${badges.tested} of ${badges.total} tested`);
     check('Power BI cards do not', badges.onPbi === 0, `${badges.onPbi} pbi cards badged`);
+
+    /*
+     * A field parameter, from the search box to the panel.
+     *
+     * The whole point is that none of this is in the report file: the visual
+     * names one field, and the parameter's other rows are reachable only by a
+     * reader moving a slicer. So the checks are about what the tool *adds* — the
+     * list of what can be swapped in, the label a reader can search for, and the
+     * fact that the table is not an ordinary table of data.
+     */
+    await page.locator('header button[role="tab"]', { hasText: 'Lineage' }).click();
+    await page.waitForTimeout(700);
+    await page.keyboard.press('Control+k');
+    const clearForParam = page.locator('[data-testid="search-palette"] button', { hasText: /^clear$/ });
+    if (await clearForParam.count()) await clearForParam.click();
+    // The caption, not the field: a label authored in the model, which the
+    // measure behind it has never been called.
+    await page.locator('[data-testid="palette-input"]').fill('Total Sales');
+    await page.waitForTimeout(500);
+    const captionHit = page.locator('[data-testid="palette-result"]')
+        .filter({ has: page.locator('[data-testid="palette-aka"]') });
+    check('the palette finds a field by the label its parameter gives it',
+        (await captionHit.count()) === 1,
+        (await page.locator('[data-testid="palette-result"]').allInnerTexts()).join(' / '));
+    check('and the row still names the measure a change would break',
+        (await captionHit.first().innerText()).includes('Total Revenue'),
+        (await captionHit.first().innerText()).replace(/\n/g, ' '));
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(400);
+
+    await page.keyboard.press('Control+k');
+    const clearForTable = page.locator('[data-testid="search-palette"] button', { hasText: /^clear$/ });
+    if (await clearForTable.count()) await clearForTable.click();
+    await page.locator('[data-testid="palette-input"]').fill('Metric Chooser');
+    await page.waitForTimeout(500);
+    await page.locator('[data-testid="palette-result"]').first().click();
+    await page.waitForTimeout(1500);
+    // A table opens on Overview; the list sits beside the expression that states
+    // it, one tab across.
+    await page.locator('[data-testid="side-panel"] [role="tab"]', { hasText: 'Definition' }).click();
+    await page.waitForTimeout(600);
+
+    const swaps = await page.locator('[data-testid="swaps-row"]').allInnerTexts();
+    check('the panel lists every field the parameter can swap in',
+        swaps.length === 4, swaps.map(r => r.replace(/\n/g, ' ')).join(' / '));
+    check('each row names the label and the field behind it',
+        swaps.join(' ').includes('Total Sales') && swaps.join(' ').includes('Sales[UnitPrice]'),
+        swaps.map(r => r.replace(/\n/g, ' ')).join(' / '));
+    /* A row pointing at a field the model no longer has breaks the visual for
+       whoever picks it, and warns nobody at open time — so it is kept and
+       marked rather than quietly dropped from the list. */
+    check('a row pointing at nothing is shown as such, not dropped',
+        swaps.some(r => /not found/.test(r)),
+        swaps.map(r => r.replace(/\n/g, ' ')).join(' / '));
+    check('the table is marked as a parameter, not left looking like data',
+        /field parameter/i.test(await page.locator('[data-testid="side-panel"]').innerText()));
+
+    /*
+     * And it is downstream of the fields it offers, reachable from the card.
+     *
+     * Drawn with no upstream at all, a parameter read as a table out of nowhere —
+     * the opposite of the truth, since renaming any field it names breaks a row.
+     * The hop menu is checked as well as the edge: a table downstream of a table
+     * had no row in that menu, so the link existed with no way to reveal it.
+     */
+    const paramCard = page.locator('.node-card', { hasText: 'Metric Chooser' }).first();
+    check('a parameter card offers the fields it comes from',
+        (await paramCard.locator('.hop-btn, [data-testid="hop-menu-button"]').count()) > 0
+        || (await paramCard.locator('button[title*="pstream" i]').count()) > 0,
+        'no upstream control on the card');
+
+    await page.keyboard.press('Control+k');
+    const clearForHop = page.locator('[data-testid="search-palette"] button', { hasText: /^clear$/ });
+    if (await clearForHop.count()) await clearForHop.click();
+    await page.locator('[data-testid="palette-input"]').fill('Sales');
+    await page.waitForTimeout(500);
+    await page.locator('[data-testid="palette-result"]').first().click();
+    await page.waitForTimeout(1500);
+    const tableCard = page.locator('.node-card', { hasText: 'Sales' }).first();
+    const hopBtn = tableCard.locator('[data-testid="hop-menu-button"]');
+    if (await hopBtn.count()) {
+        await hopBtn.first().click();
+        await page.waitForTimeout(500);
+        const menu = await page.locator('[data-testid="hop-menu"]').innerText();
+        check('the downstream menu can name a table, not only pages and measures',
+            /tables/i.test(menu), menu.replace(/\n/g, ' · '));
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(300);
+    } else {
+        check('the downstream menu can name a table, not only pages and measures',
+            false, 'no hop menu on the table card');
+    }
 
     /*
      * Escape is the rail's Reset on a key: back to the state the report opened

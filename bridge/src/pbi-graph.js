@@ -79,6 +79,99 @@ function buildPbiGraph(pbip) {
         });
     }
 
+    /*
+     * Field parameters, resolved to the nodes their rows point at.
+     *
+     * A row names a field without reading it, so nothing else in the model
+     * records the dependency. Resolution has to happen here, against the whole
+     * model, because a row may name its target with a table or without one —
+     * the unqualified form being how a measure is normally written.
+     *
+     * Resolution is recorded on the row, including its failure. A row pointing
+     * at a field that no longer exists and a row nobody uses are the same shape
+     * once you are looking at the edge list, and only one of them is a problem.
+     */
+    /*
+     * Resolution is case-insensitive, and it resolves to the name the model
+     * declares rather than the one the row happens to spell.
+     *
+     * Power BI does not care about case and report authors are not consistent
+     * about it: a row written `NAMEOF([Total Value Sold])` refers to the measure
+     * declared `Total Value sold`. Building an id out of the row's
+     * spelling produced an id for a node that does not exist, so the row resolved
+     * and then linked to nothing — the same silent near-miss the broken-reference
+     * check already exists to avoid.
+     */
+    const measureHome = new Map();          // lower(name) -> {table, name} as declared
+    for (const table of model.tables || []) {
+        for (const measure of table.measures || []) {
+            if (!measureHome.has(lower(measure.name))) {
+                measureHome.set(lower(measure.name), { table: table.name, name: measure.name });
+            }
+        }
+    }
+    const tablesByName = new Map();          // lower(table) -> {name, columns, measures} as declared
+    for (const table of model.tables || []) {
+        tablesByName.set(lower(table.name), {
+            name: table.name,
+            columns: new Map((table.columns || []).map(c => [lower(c.name), c.name])),
+            measures: new Map((table.measures || []).map(m => [lower(m.name), m.name])),
+        });
+    }
+
+    const NOT_FOUND = { targetId: null, targetKind: null, homeTable: null };
+    const resolveParameterRow = item => {
+        const name = lower(item.targetName);
+        // Unqualified brackets are a measure, always: that is what the syntax
+        // means, and it is the form a parameter over measures is written in.
+        if (!item.targetTable) {
+            const home = measureHome.get(name);
+            return home ? {
+                targetId: measureId(home.table, home.name), targetKind: 'measure',
+                homeTable: home.table, targetTable: null, targetName: home.name,
+            } : NOT_FOUND;
+        }
+        const table = tablesByName.get(lower(item.targetTable));
+        if (!table) return NOT_FOUND;
+        // A qualified name may be either, and a measure wins — Power BI will not
+        // let a table hold a measure and a column of one name.
+        const measure = table.measures.get(name);
+        if (measure) {
+            return {
+                targetId: measureId(table.name, measure), targetKind: 'measure',
+                homeTable: table.name, targetTable: table.name, targetName: measure,
+            };
+        }
+        const column = table.columns.get(name);
+        if (!column) return NOT_FOUND;
+        return {
+            targetId: tableId(table.name), targetKind: 'column',
+            homeTable: table.name, targetTable: table.name, targetName: column,
+        };
+    };
+
+    const parametersByTable = new Map();    // lower(fp table) -> {name, markerColumn, valueColumn, items}
+    for (const table of model.tables || []) {
+        if (!table.fieldParameter) continue;
+        /*
+         * The column the reader actually sees. A parameter carries three or four:
+         * the labels, a hidden one holding the references, a hidden one for the
+         * sort order, and sometimes a fourth. Only the first is what a visual
+         * binds to, so it is the one an upstream link should land on.
+         */
+        const marker = lower(table.fieldParameter.markerColumn || '');
+        const value = (table.columns || []).find(c => !c.isHidden && lower(c.name) !== marker)
+            || (table.columns || [])[0] || null;
+        parametersByTable.set(lower(table.name), {
+            name: table.name,
+            markerColumn: table.fieldParameter.markerColumn || null,
+            valueColumn: value ? value.name : null,
+            items: (table.fieldParameter.items || []).map(item => ({
+                ...item, ...resolveParameterRow(item),
+            })),
+        });
+    }
+
     const renamesByTable = new Map();
     for (const row of physicalIndex) {
         if (lower(row.physicalColumn) === lower(row.modelColumn)) continue;
@@ -126,6 +219,9 @@ function buildPbiGraph(pbip) {
                 physicalSource: phys,
                 relation: phys ? [phys.database, phys.schema, phys.table].filter(Boolean).join('.') : null,
                 renames: renamesByTable.get(lower(table.name)) || [],
+                // Present only on a field parameter, so a reader — and the
+                // panel — can tell one from a table that merely looks odd.
+                fieldParameter: parametersByTable.get(lower(table.name)) || null,
                 relationshipCount: (table.columns || [])
                     .reduce((n, c) => n + (relationshipsByColumn.get(relKey(table.name, c.name))?.length || 0), 0),
                 tags: [],
@@ -343,7 +439,16 @@ function buildPbiGraph(pbip) {
      * column rename the semantic model itself performs. That one no report
      * reader ever sees; this one is the only name they *do* see.
      */
-    const aliasIndex = new Map();          // "type|table|field" -> Map(alias -> sites[])
+    /*
+     * Keyed by origin as well as by name, because one label can arrive from both
+     * at once — a parameter row captioned "Price per Unit" and a visual whose
+     * field well renames the same column to "Price per Unit" is an ordinary
+     * thing for one author to have done twice. Keyed by name alone, the two
+     * merged into a single row that credited the parameter with a rename typed
+     * into a visual, and pointed the reader at the wrong place to change it.
+     */
+    const aliasKey = (origin, alias) => `${origin} ${alias}`;
+    const aliasIndex = new Map();          // "type|table|field" -> Map(originKey -> entry)
     const renameRows = [];                 // the same facts, flat, for Diagnostics
     for (const visual of payload.visualData?.visuals || []) {
         for (const field of visual.fields || []) {
@@ -361,8 +466,11 @@ function buildPbiGraph(pbip) {
                 const key = `${field.type}|${lower(fTable)}|${lower(fName)}`;
                 if (!aliasIndex.has(key)) aliasIndex.set(key, new Map());
                 const byAlias = aliasIndex.get(key);
-                if (!byAlias.has(alias)) byAlias.set(alias, []);
-                byAlias.get(alias).push({
+                const entryKey = aliasKey('visual', alias);
+                if (!byAlias.has(entryKey)) {
+                    byAlias.set(entryKey, { name: alias, origin: 'visual', parameter: null, visuals: [] });
+                }
+                byAlias.get(entryKey).visuals.push({
                     page: visual.pageName || null,
                     visual: visual.visualName || visual.visualType || null,
                     // Role is kept because a rename on a tooltip and a rename on
@@ -374,11 +482,46 @@ function buildPbiGraph(pbip) {
         }
     }
 
+    /*
+     * A field parameter's captions belong in the same index.
+     *
+     * They are the same fact from the reader's side — a label on screen that the
+     * model has never heard of — and a reader searching one does not know which
+     * kind they have. What they need is to be told apart once found: a caption is
+     * authored once, in the model, and inherited by every visual bound to the
+     * parameter; a rename is authored in one visual and stops there. Different
+     * scope, different place to go and fix it, so each alias carries its origin.
+     */
+    for (const [key, param] of parametersByTable) {
+        const readers = [];
+        for (const visual of payload.visualData?.visuals || []) {
+            if (!(visual.fields || []).some(f => f.type === 'column' && lower(f.table) === key)) continue;
+            readers.push({
+                page: visual.pageName || null,
+                visual: visual.visualName || visual.visualType || null,
+                role: null,       // the parameter drives the well, not one role
+            });
+        }
+        for (const item of param.items) {
+            if (!item.caption || !item.targetKind || !item.homeTable) continue;
+            if (lower(item.caption) === lower(item.targetName)) continue;   // says nothing
+            const key2 = `${item.targetKind}|${lower(item.homeTable)}|${lower(item.targetName)}`;
+            if (!aliasIndex.has(key2)) aliasIndex.set(key2, new Map());
+            const byAlias = aliasIndex.get(key2);
+            const entryKey = aliasKey('parameter', item.caption);
+            if (!byAlias.has(entryKey)) {
+                byAlias.set(entryKey, {
+                    name: item.caption, origin: 'parameter', parameter: param.name, visuals: [],
+                });
+            }
+            byAlias.get(entryKey).visuals.push(...readers);
+        }
+    }
+
     /** The alias list for one field, in the shape the panel renders. */
     const aliasesFor = (type, table, name) => {
         const byAlias = aliasIndex.get(`${type}|${lower(table)}|${lower(name)}`);
-        if (!byAlias) return [];
-        return [...byAlias.entries()].map(([alias, visuals]) => ({ name: alias, visuals }));
+        return byAlias ? [...byAlias.values()] : [];
     };
 
     for (const node of Object.values(nodes)) {
@@ -391,6 +534,35 @@ function buildPbiGraph(pbip) {
         for (const col of node.columns || []) {
             const aliases = aliasesFor('column', node.name, col.name);
             if (aliases.length) col.aliases = aliases;
+        }
+    }
+
+    /*
+     * Where a field parameter comes from.
+     *
+     * Drawn with no upstream it read as a table out of nowhere, which is the
+     * opposite of the truth: every row names a field in another table, and
+     * renaming or dropping that field breaks the row — silently, for whoever
+     * picks that label in the slicer. The parameter is downstream of everything
+     * it offers.
+     *
+     * The link lands on the parameter's display column, the one a visual binds
+     * to, so a walk that reaches a field carries on through the parameter to the
+     * visuals reading it rather than stopping at the table.
+     */
+    for (const param of parametersByTable.values()) {
+        const into = tableId(param.name);
+        if (!nodes[into]) continue;
+        for (const item of param.items) {
+            if (!item.targetId || !nodes[item.targetId] || item.targetId === into) continue;
+            pushEdge(edges, {
+                source: item.targetId,
+                target: into,
+                sourceColumn: item.targetKind === 'column' ? item.targetName : '',
+                targetColumn: param.valueColumn || '',
+                kind: item.targetKind === 'measure' ? 'measure_to_table' : 'column_to_table',
+                viaParameter: param.name,
+            });
         }
     }
 
@@ -465,6 +637,35 @@ function buildPbiGraph(pbip) {
                 });
                 break;
             }
+            case 'derived_from_table': {
+                /*
+                 * A calculated table and the tables its DAX reads.
+                 *
+                 * The engine has always worked this out and nothing carried it
+                 * across, so a calculated table was drawn with no upstream —
+                 * indistinguishable from a table loaded from nowhere. It also
+                 * never fired until the partition's source type was read
+                 * properly, so this is newly worth translating.
+                 *
+                 * Field parameters are excluded: the engine resolves this at
+                 * table granularity, and a parameter's own rows are resolved to
+                 * the field, which is both narrower and more useful. Taking both
+                 * would draw the coarse link beside the precise ones.
+                 */
+                const derived = engine.nodes.get(edge.from);
+                const from = engine.nodes.get(edge.to);
+                if (!derived?.name || !from?.name) break;
+                if (parametersByTable.has(lower(derived.name))) break;
+                const target = tableId(derived.name);
+                const source = tableId(from.name);
+                if (!nodes[target] || !nodes[source] || source === target) break;
+                pushEdge(edges, {
+                    source, target,
+                    sourceColumn: '', targetColumn: '',
+                    kind: 'table_to_table',
+                });
+                break;
+            }
             case 'uses_field':
                 // Handled below, from the visuals themselves. The engine
                 // identifies a visual by `pageName|visualName`, and a name is
@@ -493,6 +694,48 @@ function buildPbiGraph(pbip) {
         const vId = visualId(visual.pageId, visual.visualId);
         if (!nodes[vId]) continue;
         const pId = visualPage.get(vId);
+
+        /*
+         * A visual driven by a field parameter reads whichever row the reader
+         * picks, but the file records only the row that was showing when the
+         * report was saved — as an ordinary field reference, so the graph looks
+         * complete and is not. Every row gets an edge, or a measure reachable
+         * only through the slicer is reported as used by nothing.
+         *
+         * `viaParameter` rides along so the difference stays visible; the edges
+         * are otherwise ordinary, which is what lets the impact walk, the
+         * highlighting and the filters count them without knowing about any of
+         * this. The row that *is* showing already has a direct edge from the
+         * pass below, and the deduplication keeps that one.
+         */
+        const driving = [];
+        for (const field of visual.fields || []) {
+            const param = field.type === 'column' && parametersByTable.get(lower(field.table));
+            if (!param || driving.some(p => p.table === param.name)) continue;
+            const sel = (visual.fpSelections || {})[param.name];
+            const chosen = sel && sel.selectedIndex != null
+                ? param.items.find(i => i.order === sel.selectedIndex) : null;
+            driving.push({
+                table: param.name,
+                items: param.items.length,
+                selected: chosen ? chosen.caption : null,
+            });
+            for (const item of param.items) {
+                if (!item.targetId || !nodes[item.targetId]) continue;
+                const column = item.targetKind === 'column' ? item.targetName : '';
+                for (const [target, kind] of [[vId, 'visual'], [pId, 'page']]) {
+                    if (!target) continue;
+                    pushEdge(edges, {
+                        source: item.targetId, target,
+                        sourceColumn: column, targetColumn: '',
+                        kind: `${item.targetKind === 'measure' ? 'measure' : 'column'}_to_${kind}`,
+                        viaParameter: param.name,
+                    });
+                }
+            }
+        }
+        if (driving.length) nodes[vId].meta.fieldParameters = driving;
+
         for (const field of visual.fields || []) {
             if (!field?.table || !field?.name) continue;
             /*
@@ -609,6 +852,35 @@ function buildPbiGraph(pbip) {
              * would look identical to a report that has no renames.
              */
             fieldRenames: renameRows,
+            /*
+             * Every field parameter and every row it offers, plus the rows that
+             * point at nothing.
+             *
+             * The two are separated because only one is a defect. A row naming a
+             * field the model no longer has breaks the visual for whoever picks
+             * it in the slicer, and it breaks it silently — the report opens
+             * fine and fails on a click nobody made while testing. The listing
+             * beside it is here for the same reason the renames are: so that
+             * "this report has no parameters" and "we failed to read them" are
+             * answerable apart.
+             */
+            fieldParameters: [...parametersByTable.values()].flatMap(p =>
+                p.items.map(item => ({
+                    parameter: p.name,
+                    shownAs: item.caption,
+                    reads: item.targetTable ? `${item.targetTable}[${item.targetName}]` : item.targetName,
+                    kind: item.targetKind || 'not found',
+                    order: item.order,
+                }))),
+            fieldParametersBroken: [...parametersByTable.values()].flatMap(p =>
+                p.items.filter(item => !item.targetId).map(item => ({
+                    parameter: p.name,
+                    shownAs: item.caption,
+                    reads: item.targetTable ? `${item.targetTable}[${item.targetName}]` : item.targetName,
+                    reason: item.targetTable
+                        ? 'No column or measure of this name on that table'
+                        : 'No measure of this name in the model',
+                }))),
         },
     };
 }
