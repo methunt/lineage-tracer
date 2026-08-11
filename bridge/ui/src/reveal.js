@@ -29,6 +29,18 @@ export const REVEAL_MENUS = {
         items: [
             { kind: 'page', label: 'Pages', dir: 'out' },
             { kind: 'measure', label: 'Measures', dir: 'out' },
+            /*
+             * A table can be downstream of a table, and the menu used to have no
+             * row that could say so — the edge existed and there was no way to
+             * reveal it.
+             *
+             * Two things arrive this way. A calculated column reading another
+             * table names it as a dependency, and a field parameter is downstream
+             * of every field it offers. Both break the table they point at if
+             * that field is renamed, and neither is a page or a measure, so
+             * neither had a row it could appear in.
+             */
+            { kind: 'pbiTable', label: 'Tables', dir: 'out' },
         ],
     },
     page: {

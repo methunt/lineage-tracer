@@ -91,53 +91,81 @@ function buildPbiGraph(pbip) {
      * at a field that no longer exists and a row nobody uses are the same shape
      * once you are looking at the edge list, and only one of them is a problem.
      */
-    const measureHome = new Map();          // lower(measure name) -> table name
+    /*
+     * Resolution is case-insensitive, and it resolves to the name the model
+     * declares rather than the one the row happens to spell.
+     *
+     * Power BI does not care about case and report authors are not consistent
+     * about it: a row written `NAMEOF([Total Value Sold])` refers to the measure
+     * declared `Total Value sold`. Building an id out of the row's
+     * spelling produced an id for a node that does not exist, so the row resolved
+     * and then linked to nothing — the same silent near-miss the broken-reference
+     * check already exists to avoid.
+     */
+    const measureHome = new Map();          // lower(name) -> {table, name} as declared
     for (const table of model.tables || []) {
         for (const measure of table.measures || []) {
-            if (!measureHome.has(lower(measure.name))) measureHome.set(lower(measure.name), table.name);
+            if (!measureHome.has(lower(measure.name))) {
+                measureHome.set(lower(measure.name), { table: table.name, name: measure.name });
+            }
         }
     }
-    const columnsByTable = new Map();       // lower(table) -> {name, columns: Set}
+    const tablesByName = new Map();          // lower(table) -> {name, columns, measures} as declared
     for (const table of model.tables || []) {
-        columnsByTable.set(lower(table.name), {
+        tablesByName.set(lower(table.name), {
             name: table.name,
-            columns: new Set((table.columns || []).map(c => lower(c.name))),
+            columns: new Map((table.columns || []).map(c => [lower(c.name), c.name])),
+            measures: new Map((table.measures || []).map(m => [lower(m.name), m.name])),
         });
     }
 
+    const NOT_FOUND = { targetId: null, targetKind: null, homeTable: null };
     const resolveParameterRow = item => {
         const name = lower(item.targetName);
         // Unqualified brackets are a measure, always: that is what the syntax
         // means, and it is the form a parameter over measures is written in.
         if (!item.targetTable) {
             const home = measureHome.get(name);
-            return home
-                ? { targetId: measureId(home, item.targetName), targetKind: 'measure', homeTable: home }
-                : { targetId: null, targetKind: null, homeTable: null };
+            return home ? {
+                targetId: measureId(home.table, home.name), targetKind: 'measure',
+                homeTable: home.table, targetTable: null, targetName: home.name,
+            } : NOT_FOUND;
         }
-        const table = columnsByTable.get(lower(item.targetTable));
-        if (!table) return { targetId: null, targetKind: null, homeTable: null };
+        const table = tablesByName.get(lower(item.targetTable));
+        if (!table) return NOT_FOUND;
         // A qualified name may be either, and a measure wins — Power BI will not
         // let a table hold a measure and a column of one name.
-        const measureTable = (model.tables || []).find(t =>
-            lower(t.name) === lower(item.targetTable) &&
-            (t.measures || []).some(m => lower(m.name) === name));
-        if (measureTable) {
+        const measure = table.measures.get(name);
+        if (measure) {
             return {
-                targetId: measureId(measureTable.name, item.targetName),
-                targetKind: 'measure', homeTable: measureTable.name,
+                targetId: measureId(table.name, measure), targetKind: 'measure',
+                homeTable: table.name, targetTable: table.name, targetName: measure,
             };
         }
-        if (!table.columns.has(name)) return { targetId: null, targetKind: null, homeTable: null };
-        return { targetId: tableId(table.name), targetKind: 'column', homeTable: table.name };
+        const column = table.columns.get(name);
+        if (!column) return NOT_FOUND;
+        return {
+            targetId: tableId(table.name), targetKind: 'column',
+            homeTable: table.name, targetTable: table.name, targetName: column,
+        };
     };
 
-    const parametersByTable = new Map();    // lower(fp table) -> {name, markerColumn, items}
+    const parametersByTable = new Map();    // lower(fp table) -> {name, markerColumn, valueColumn, items}
     for (const table of model.tables || []) {
         if (!table.fieldParameter) continue;
+        /*
+         * The column the reader actually sees. A parameter carries three or four:
+         * the labels, a hidden one holding the references, a hidden one for the
+         * sort order, and sometimes a fourth. Only the first is what a visual
+         * binds to, so it is the one an upstream link should land on.
+         */
+        const marker = lower(table.fieldParameter.markerColumn || '');
+        const value = (table.columns || []).find(c => !c.isHidden && lower(c.name) !== marker)
+            || (table.columns || [])[0] || null;
         parametersByTable.set(lower(table.name), {
             name: table.name,
             markerColumn: table.fieldParameter.markerColumn || null,
+            valueColumn: value ? value.name : null,
             items: (table.fieldParameter.items || []).map(item => ({
                 ...item, ...resolveParameterRow(item),
             })),
@@ -509,6 +537,35 @@ function buildPbiGraph(pbip) {
         }
     }
 
+    /*
+     * Where a field parameter comes from.
+     *
+     * Drawn with no upstream it read as a table out of nowhere, which is the
+     * opposite of the truth: every row names a field in another table, and
+     * renaming or dropping that field breaks the row — silently, for whoever
+     * picks that label in the slicer. The parameter is downstream of everything
+     * it offers.
+     *
+     * The link lands on the parameter's display column, the one a visual binds
+     * to, so a walk that reaches a field carries on through the parameter to the
+     * visuals reading it rather than stopping at the table.
+     */
+    for (const param of parametersByTable.values()) {
+        const into = tableId(param.name);
+        if (!nodes[into]) continue;
+        for (const item of param.items) {
+            if (!item.targetId || !nodes[item.targetId] || item.targetId === into) continue;
+            pushEdge(edges, {
+                source: item.targetId,
+                target: into,
+                sourceColumn: item.targetKind === 'column' ? item.targetName : '',
+                targetColumn: param.valueColumn || '',
+                kind: item.targetKind === 'measure' ? 'measure_to_table' : 'column_to_table',
+                viaParameter: param.name,
+            });
+        }
+    }
+
     // ── Edges, translated from the engine's own graph ────────────────────────
     // Only the relationships that matter for lineage; layout edges are dropped.
     // Calculated-column dependencies, collected here and attached to the
@@ -577,6 +634,35 @@ function buildPbiGraph(pbip) {
                     sourceColumn: '',
                     targetColumn: '',
                     kind: 'measure_to_measure',
+                });
+                break;
+            }
+            case 'derived_from_table': {
+                /*
+                 * A calculated table and the tables its DAX reads.
+                 *
+                 * The engine has always worked this out and nothing carried it
+                 * across, so a calculated table was drawn with no upstream —
+                 * indistinguishable from a table loaded from nowhere. It also
+                 * never fired until the partition's source type was read
+                 * properly, so this is newly worth translating.
+                 *
+                 * Field parameters are excluded: the engine resolves this at
+                 * table granularity, and a parameter's own rows are resolved to
+                 * the field, which is both narrower and more useful. Taking both
+                 * would draw the coarse link beside the precise ones.
+                 */
+                const derived = engine.nodes.get(edge.from);
+                const from = engine.nodes.get(edge.to);
+                if (!derived?.name || !from?.name) break;
+                if (parametersByTable.has(lower(derived.name))) break;
+                const target = tableId(derived.name);
+                const source = tableId(from.name);
+                if (!nodes[target] || !nodes[source] || source === target) break;
+                pushEdge(edges, {
+                    source, target,
+                    sourceColumn: '', targetColumn: '',
+                    kind: 'table_to_table',
                 });
                 break;
             }

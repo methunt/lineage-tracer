@@ -1456,6 +1456,42 @@ async function buildSampleReport() {
         /field parameter/i.test(await page.locator('[data-testid="side-panel"]').innerText()));
 
     /*
+     * And it is downstream of the fields it offers, reachable from the card.
+     *
+     * Drawn with no upstream at all, a parameter read as a table out of nowhere —
+     * the opposite of the truth, since renaming any field it names breaks a row.
+     * The hop menu is checked as well as the edge: a table downstream of a table
+     * had no row in that menu, so the link existed with no way to reveal it.
+     */
+    const paramCard = page.locator('.node-card', { hasText: 'Metric Chooser' }).first();
+    check('a parameter card offers the fields it comes from',
+        (await paramCard.locator('.hop-btn, [data-testid="hop-menu-button"]').count()) > 0
+        || (await paramCard.locator('button[title*="pstream" i]').count()) > 0,
+        'no upstream control on the card');
+
+    await page.keyboard.press('Control+k');
+    const clearForHop = page.locator('[data-testid="search-palette"] button', { hasText: /^clear$/ });
+    if (await clearForHop.count()) await clearForHop.click();
+    await page.locator('[data-testid="palette-input"]').fill('Sales');
+    await page.waitForTimeout(500);
+    await page.locator('[data-testid="palette-result"]').first().click();
+    await page.waitForTimeout(1500);
+    const tableCard = page.locator('.node-card', { hasText: 'Sales' }).first();
+    const hopBtn = tableCard.locator('[data-testid="hop-menu-button"]');
+    if (await hopBtn.count()) {
+        await hopBtn.first().click();
+        await page.waitForTimeout(500);
+        const menu = await page.locator('[data-testid="hop-menu"]').innerText();
+        check('the downstream menu can name a table, not only pages and measures',
+            /tables/i.test(menu), menu.replace(/\n/g, ' · '));
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(300);
+    } else {
+        check('the downstream menu can name a table, not only pages and measures',
+            false, 'no hop menu on the table card');
+    }
+
+    /*
      * Escape is the rail's Reset on a key: back to the state the report opened
      * in.
      *

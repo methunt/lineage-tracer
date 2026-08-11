@@ -257,6 +257,13 @@ const parameterTable = {
             { caption: 'Gamma', targetTable: null, targetName: 'mTotal', order: 1, group: null },
             // Named, and nothing in the model answers to it.
             { caption: 'Ghost', targetTable: 't_dim', targetName: 'colGone', order: 2, group: null },
+            /*
+             * Spelled in a case the model does not use. Power BI does not care
+             * and authors are inconsistent, so this must resolve — and resolve to
+             * the *declared* spelling, or the id names a node that does not
+             * exist and the row links to nothing at all.
+             */
+            { caption: 'Cased', targetTable: 'T_DIM', targetName: 'COLB', order: 3, group: null },
         ],
     },
 };
@@ -310,7 +317,7 @@ const edgeFrom = (source, column, target) => g.edges
 const fpNode = g.nodes['pbi:table:Chooser'];
 check('the parameter table says it is one', !!fpNode?.meta?.fieldParameter);
 check('and carries its rows for the panel to show',
-    (fpNode?.meta?.fieldParameter?.items || []).length === 3,
+    (fpNode?.meta?.fieldParameter?.items || []).length === 4,
     JSON.stringify((fpNode?.meta?.fieldParameter?.items || []).map(i => i.caption)));
 
 /*
@@ -327,6 +334,12 @@ check('a row with no table resolves to the measure that answers to the name',
     byCaption('Gamma')?.targetId === 'pbi:measure:t_metrics[mTotal]' &&
     byCaption('Gamma')?.targetKind === 'measure',
     `${byCaption('Gamma')?.targetId} (${byCaption('Gamma')?.targetKind})`);
+check('a row spelled in another case still resolves',
+    byCaption('Cased')?.targetId === 'pbi:table:t_dim',
+    String(byCaption('Cased')?.targetId));
+check('and is reported under the name the model declares',
+    byCaption('Cased')?.targetTable === 't_dim' && byCaption('Cased')?.targetName === 'colB',
+    `${byCaption('Cased')?.targetTable}[${byCaption('Cased')?.targetName}]`);
 check('a row pointing at nothing says so, rather than going quiet',
     byCaption('Ghost')?.targetId === null && byCaption('Ghost')?.targetKind === null,
     JSON.stringify(byCaption('Ghost')));
@@ -369,6 +382,28 @@ check('the visual records that a parameter drives it',
     shown.length === 1 && shown[0].table === 'Chooser', JSON.stringify(shown));
 check('and which row was showing when the report was saved',
     shown[0]?.selected === 'Alpha', String(shown[0]?.selected));
+
+/*
+ * Where a parameter comes from.
+ *
+ * A parameter looked like a table with no upstream at all, which reads as "this
+ * came from nowhere" — and it is the opposite of true: every row names a field
+ * in another table, and renaming or dropping that field breaks the row. The
+ * parameter is downstream of everything it offers.
+ *
+ * The edge lands on the parameter's own display column, so a walk that arrives
+ * at a field carries on through the parameter to the visuals reading it, instead
+ * of stopping at the table.
+ */
+const upstream = edgeFrom('pbi:table:t_dim', 'colA', 'pbi:table:Chooser');
+check('a parameter is downstream of the column it offers', !!upstream,
+    into('pbi:table:Chooser').map(e => `${e.source}[${e.sourceColumn}]`).join(' · '));
+check('and of the measure it offers',
+    !!edgeFrom('pbi:measure:t_metrics[mTotal]', null, 'pbi:table:Chooser'));
+check('the link lands on the column the parameter exposes',
+    upstream?.targetColumn === 'Chooser', String(upstream?.targetColumn));
+check('a row pointing at nothing has nothing to come from',
+    into('pbi:table:Chooser').every(e => e.sourceColumn !== 'colGone'));
 
 /*
  * The caption, as a name the field is read under.
