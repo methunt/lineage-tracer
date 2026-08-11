@@ -830,6 +830,18 @@ table.dt td.mono { font-family: var(--font-mono); font-size: var(--fs-code); }
     border: 1px dashed var(--border);
 }
 
+/* The label a visual renamed the field to. Solid-bordered rather than dashed:
+   the dashed border next to it means "not in the model", and a rename is the
+   opposite claim — the field is certainly there, under another name. Truncates
+   instead of wrapping, so a long label cannot push the row's real name out of
+   its own list. */
+.field-aka {
+    flex: none; max-width: 45%; padding: 1px 6px; border-radius: 999px;
+    font-size: var(--fs-sm); color: var(--muted);
+    border: 1px solid var(--border); background: var(--panel-2);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
 /* Resize handles — 6px hit area, grip revealed on hover. */
 .resizer {
     flex: none; width: 6px; cursor: col-resize;

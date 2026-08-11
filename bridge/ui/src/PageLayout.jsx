@@ -357,9 +357,21 @@ export default function PageLayout() {
         const p = panRef.current;
         panRef.current = null;
         if (p?.moved) e.currentTarget.releasePointerCapture?.(e.pointerId);
-        // A press that neither moved nor landed on a visual is a click on the
-        // background: clear the selection, the same as the lineage canvas.
-        if (p && !p.moved && !p.onVisual) select(null);
+        /*
+         * A press on the background does nothing.
+         *
+         * It used to clear the selection, the way the lineage canvas does, and
+         * on a page layout that reads as a misfire rather than as a command. The
+         * blank space here is not blank: a report's own empty area is full of
+         * unlabelled boxes, group containers and stretched backdrops, so a press
+         * meant for nothing frequently lands on something. And when it did clear,
+         * it half-cleared — the panel and the caption went while a stale trace
+         * stayed lit — which reads as the page ignoring you.
+         *
+         * Escape is the deliberate way to clear this view, and being deliberate
+         * is the point: nothing is lost to a stray click on a canvas whose empty
+         * space cannot be identified by eye.
+         */
     };
 
     // Anything the current trace reaches. With nothing selected there is no
@@ -377,7 +389,10 @@ export default function PageLayout() {
     const hitsHere = visuals.filter(v => litSet?.has(v.id)).length;
     /* A press on this tab, so it may clear the trace: what the rule forbids is
        a click changing a tab you cannot see, not one you asked for here. */
-    const clearTrace = useStore(s => s.select);
+    // The same action Escape runs. On this tab that is exactly what the caption
+    // offers: drop what is marking this page, and leave the other tab's filters
+    // where the reader set them.
+    const clearTrace = useStore(s => s.escape);
 
     return (
         <div className="flex-1 min-h-0 flex">
@@ -454,7 +469,12 @@ export default function PageLayout() {
                             <b className="tnum">{hitsHere}</b> of {visuals.length} visual
                             {visuals.length === 1 ? '' : 's'} on this page
                         </span>
-                        <button data-testid="trace-note-clear" onClick={() => clearTrace(null)}
+                        {/* Clears the marks on this view, not just the trace.
+                            As `select(null)` it dropped the trace and the
+                            selection and left the travelled-to box outlined —
+                            "clear" that visibly does not clear reads as the
+                            page ignoring the press. */}
+                        <button data-testid="trace-note-clear" onClick={clearTrace}
                             className="trace-note-clear">clear</button>
                     </div>
                 )}

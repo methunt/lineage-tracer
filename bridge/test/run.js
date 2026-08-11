@@ -53,6 +53,13 @@ function check(name, pass, detail) {
     console.log('\n— pbi graph —');
     failures += require('./pbi-graph').failures;
 
+    // Renames, on a synthetic payload: the cases that matter are a field
+    // renamed two different ways and the several near-misses that must *not*
+    // read as renames, and no real project can be relied on to hold all of
+    // them at once.
+    console.log('\n— renames —');
+    failures += require('./renames').failures;
+
     // The folder tree, on a synthetic project: samples/ is flat and the
     // real projects nest several folders deep, so neither exercises collapsing a
     // single-child chain or a folder holding both files and subfolders.

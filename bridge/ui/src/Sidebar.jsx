@@ -460,11 +460,12 @@ export default function Sidebar() {
     const layerOrder = useStore(s => s.layerOrder);
     const layers = useStore(s => s.layers);
     const setAll = useStore(s => s.setAll);
+    // Still needed by "Hide all"/"Show all", which drops the selection without
+    // being a reset — the eyes it toggles are the point of that press.
     const select = useStore(s => s.select);
-    const clearFocus = useStore(s => s.clearFocus);
     const linkedOnly = useStore(s => s.linkedOnly);
     const setLinkedOnly = useStore(s => s.setLinkedOnly);
-    const resetToBlank = useStore(s => s.resetToBlank);
+    const escape = useStore(s => s.escape);
     const railW = useStore(s => s.railW);
 
     const q = filter.trim().toLowerCase();
@@ -548,25 +549,16 @@ export default function Sidebar() {
                         data-testid="reset-view"
                         className="flex items-center gap-1.5"
                         style={{ color: 'var(--muted)', fontSize: 'var(--fs-sm)' }}
-                        title="Clear search, focus and every filter — back to the empty canvas the report opens on"
-                        onClick={() => {
-                            setAll('kinds', DEFAULT_KINDS);
-                            setAll('layers', layerOrder);
-                            setAll('resources', allResources);
-                            setLinkedOnly(true);   // the opening state, not "off"
-                            setFilter('');
-                            clearFocus();
-                            select(null);
-                            /*
-                             * Last, because setAll and friends clear it: Reset
-                             * means "as the report opened", and the report now
-                             * opens on the question rather than on the whole
-                             * graph. Anything short of that leaves the reader
-                             * with the wall of nodes they pressed Reset to
-                             * escape.
-                             */
-                            resetToBlank();
-                        }}>
+                        title="Clear search, focus and every filter — back to the empty canvas the report opens on (Esc)"
+                        /*
+                         * The same action the Escape key runs, rather than a
+                         * second copy of the same eight calls. As two copies they
+                         * had already begun to differ — the key cleared the marks
+                         * and left the eyes alone — and a button and a shortcut
+                         * that promise one thing while doing two is worse than
+                         * having only one of them.
+                         */
+                        onClick={escape}>
                         <IconReset size="sm" />Reset
                     </button>
                 </div>

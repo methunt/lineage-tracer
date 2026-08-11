@@ -128,6 +128,78 @@ const Section = ({ title, count, note, children }) => (
     </div>
 );
 
+/**
+ * Where one alias is used, as a tooltip.
+ *
+ * The role travels with the visual because a rename on a tooltip and a rename on
+ * a value are not equally visible to a reader, and neither this nor the reader
+ * should have to guess which of the two they were shown.
+ */
+const aliasTitle = alias => (alias.visuals || [])
+    .map(v => [v.visual, v.page && `on ${v.page}`, v.role && `(${v.role})`]
+        .filter(Boolean).join(' '))
+    .join('\n') || null;
+
+/**
+ * The names this field is read under in the report.
+ *
+ * The other half of searching by alias. A reader is told "Label B is wrong",
+ * finds their way to the measure, and then has to know that the same measure is
+ * also read as something else in six other visuals — otherwise they fix one
+ * chart and leave the rest. Renders nothing at all when nothing was renamed,
+ * which is the common case and the case for every graph built before renames
+ * were extracted.
+ */
+function ShownAs({ aliases }) {
+    if (!aliases?.length) return null;
+    /*
+     * The same table the Diagnostics tab draws, in a framed box like the column
+     * list above it. Header row and underlines alone read as a list; the ruled,
+     * striped rows are what make two columns legible as a pair.
+     *
+     * The labels are unquoted. The quotes were doing a job the layout does
+     * better — marking the cell as something a person typed rather than an
+     * identifier out of the model — and a column headed "Label" says that
+     * already, where punctuation inside the cell only competes with the words it
+     * wraps.
+     */
+    const rows = [...aliases].sort((a, b) =>
+        // Widest reach first. The order labels happen to appear in the report
+        // file is not a fact about anything, and the one used in most visuals is
+        // the one a reader is most likely to have been quoted.
+        b.visuals.length - a.visuals.length || a.name.localeCompare(b.name));
+
+    return (
+        <Section title="Shown as" count={aliases.length}
+            note="Renamed inside the visual. The semantic model still calls it by the name above.">
+            <div className="rounded-[var(--r-md)] border overflow-hidden"
+                style={{ borderColor: 'var(--border)' }}>
+                <table className="dt">
+                    <thead>
+                        <tr>
+                            <th>Label</th>
+                            <th className="dt-act">Visuals</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.map(a => (
+                            <tr key={a.name} data-testid="shown-as-row">
+                                <td className="font-semibold">{a.name}</td>
+                                {/* The visuals themselves stay in the tooltip:
+                                    eight names is a paragraph, and the count is
+                                    what the reader is scanning for. */}
+                                <td className="dt-act tnum" title={aliasTitle(a)}>
+                                    {a.visuals.length}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </Section>
+    );
+}
+
 const Code = ({ text }) => (
     <pre className="mono p-3 rounded-[var(--r-md)] overflow-auto scrollbar-thin whitespace-pre"
         style={{ background: 'var(--panel-2)', border: '1px solid var(--border)', lineHeight: 1.65 }}>
@@ -682,9 +754,14 @@ function FieldsUsed({ fields }) {
                             className={`field-row ${hit ? 'is-linked' : 'is-orphan'}`}
                             disabled={!hit}
                             onClick={() => open(hit)}
-                            title={hit
-                                ? `Trace ${f.table}[${f.name}] — role ${f.role || 'none'}`
-                                : `${f.table}[${f.name}] is not in the semantic model, so it cannot be traced`}
+                            title={[
+                                hit
+                                    ? `Trace ${f.table}[${f.name}] — role ${f.role || 'none'}`
+                                    : `${f.table}[${f.name}] is not in the semantic model, so it cannot be traced`,
+                                f.displayName
+                                    ? `Renamed in this visual: reads as “${f.displayName}”`
+                                    : null,
+                            ].filter(Boolean).join('\n')}
                         >
                             <FieldIcon size="sm" style={{
                                 color: isMeasure ? KIND_COLOR.measure : KIND_COLOR.pbiTable,
@@ -692,6 +769,16 @@ function FieldsUsed({ fields }) {
                             <span className="mono field-name">
                                 <span style={{ color: 'var(--muted)' }}>{f.table}</span>[{f.name}]
                             </span>
+                            {/* The model's name leads and the visual's label
+                                follows it. Reversing them would leave the row
+                                naming something the trace does not act on: the
+                                click trades on the real identity, and that is
+                                also the name to take to the semantic model. */}
+                            {f.displayName && (
+                                <span className="field-aka" data-testid="field-aka">
+                                    aka “{f.displayName}”
+                                </span>
+                            )}
                             {hit && depth && (
                                 <span className="field-depth" data-testid="field-depth">{depth}</span>
                             )}
@@ -708,6 +795,7 @@ function FieldsUsed({ fields }) {
 
 function Definition({ node }) {
     const d = node.definition || {};
+    const aliases = node.meta?.aliases || [];
     const blocks = [];
     if (d.compiledSql) blocks.push(['Compiled SQL', d.compiledSql]);
     if (!d.compiledSql && d.rawSql) blocks.push(['Raw SQL', d.rawSql]);
@@ -715,7 +803,7 @@ function Definition({ node }) {
     if (d.m) blocks.push(['M (as authored)', d.m]);
     if (d.mInlined) blocks.push(['M (source function resolved by lineage-bridge)', d.mInlined]);
 
-    if (!blocks.length && !d.fields?.length) {
+    if (!blocks.length && !d.fields?.length && !aliases.length) {
         return (
             <div className="flex items-center gap-2" style={{ color: 'var(--muted)' }}>
                 <IconCode size="sm" /> No definition available for this node.
@@ -729,6 +817,10 @@ function Definition({ node }) {
                     <FieldsUsed fields={d.fields} />
                 </Section>
             )}
+            {/* Above the DAX: the name a reader complained about is how they got
+                here, so it should not be below a block of code they have to
+                scroll past to confirm they are in the right place. */}
+            <ShownAs aliases={aliases} />
             {blocks.map(([title, text]) => (
                 <Section key={title} title={title}><Code text={text} /></Section>
             ))}
@@ -752,9 +844,16 @@ const FIND_AT = 8;
 function Columns({ columns }) {
     const [q, setQ] = useState('');
     const needle = q.trim().toLowerCase();
+    /*
+     * Also findable by the name a visual renamed it to. The command palette
+     * knows those names, and a reader who typed one there and landed on this
+     * table would find the box directly above the list unable to repeat the
+     * trick — the same word, refused one level in.
+     */
     const shown = needle
         ? columns.filter(c => c.name.toLowerCase().includes(needle)
-            || (c.description || '').toLowerCase().includes(needle))
+            || (c.description || '').toLowerCase().includes(needle)
+            || (c.aliases || []).some(a => a.name.toLowerCase().includes(needle)))
         : columns;
 
     return (
@@ -798,6 +897,14 @@ function Columns({ columns }) {
                                 <span className="font-semibold" style={{ overflowWrap: 'anywhere' }}>
                                     {c.name}
                                 </span>
+                                {/* Renamed somewhere in the report, so this name
+                                    is one no reader of that visual has seen. */}
+                                {(c.aliases || []).map(a => (
+                                    <span key={a.name} className="field-aka" data-testid="column-aka"
+                                        title={aliasTitle(a)}>
+                                        aka “{a.name}”
+                                    </span>
+                                ))}
                                 <span className="flex-1" />
                                 {c.isHidden && (
                                     <IconHide size="sm" style={{ color: 'var(--muted)' }} title="Hidden" />
