@@ -227,6 +227,153 @@ const facts = tableNamed(parse({ 'tables/Facts.tmdl': ORDINARY }), 'Facts');
 check('an ordinary table is left exactly as it was',
     !!facts && facts.fieldParameter === null && facts._isFieldParameter !== true);
 
+/* ── Into the graph ───────────────────────────────────────────────────────────
+ *
+ * Reading the rows is half of it. The rows have to become edges, because every
+ * question a reader asks — is this measure used, what breaks if I change it,
+ * which visuals read it — is answered by walking edges. A parameter whose rows
+ * stay in the model object is a parameter the impact walk cannot see.
+ *
+ * The visual is the trap. Power BI writes the item that happened to be selected
+ * when the report was saved as an ordinary field reference, so the tool already
+ * shows one edge and looks correct. The other rows are the ones nobody can see,
+ * and a reader switching the slicer reads them.
+ */
+const { buildPbiGraph } = require('../src/pbi-graph');
+
+const parameterTable = {
+    name: 'Chooser',
+    columns: [
+        { name: 'Chooser', dataType: 'string' },
+        { name: 'Chooser Fields', isHidden: true, hasParameterMetadata: true },
+    ],
+    measures: [],
+    partitions: [{ name: 'Chooser', mode: 'import', sourceType: 'calculated', source: '{}' }],
+    fieldParameter: {
+        markerColumn: 'Chooser Fields',
+        items: [
+            { caption: 'Alpha', targetTable: 't_dim', targetName: 'colA', order: 0, group: null },
+            // Unqualified, the form a measure is written in.
+            { caption: 'Gamma', targetTable: null, targetName: 'mTotal', order: 1, group: null },
+            // Named, and nothing in the model answers to it.
+            { caption: 'Ghost', targetTable: 't_dim', targetName: 'colGone', order: 2, group: null },
+        ],
+    },
+};
+
+const graphPayload = () => {
+    const visual = {
+        pageId: 'p1', pageName: 'Overview', visualId: 'v1',
+        visualName: 'By Chosen Field', visualType: 'barChart', name: 'v1',
+        position: { x: 0, y: 0, z: 0, width: 100, height: 100 },
+        // What Power BI writes: the parameter's own column, as an ordinary field.
+        fields: [{ type: 'column', table: 'Chooser', name: 'Chooser', role: 'Category' }],
+        fpSelections: { Chooser: { selectedIndex: 0, length: 1 } },
+    };
+    return {
+        payload: {
+            parsedModel: {
+                model: { name: 'm' },
+                tables: [
+                    parameterTable,
+                    {
+                        name: 't_dim', measures: [], partitions: [],
+                        columns: [{ name: 'colA', dataType: 'string' }, { name: 'colB' }],
+                        fieldParameter: null,
+                    },
+                    {
+                        name: 't_metrics', columns: [], partitions: [],
+                        measures: [{ name: 'mTotal', expression: '1' }],
+                        fieldParameter: null,
+                    },
+                ],
+                relationships: [],
+            },
+            visualData: {
+                pages: [{ pageId: 'p1', pageName: 'Overview', displayName: 'Overview', visuals: [visual] }],
+                visuals: [visual],
+            },
+        },
+        engine: { nodes: new Map(), edges: [] },
+        physicalIndex: [],
+        mComputed: new Map(),
+    };
+};
+
+const g = buildPbiGraph(graphPayload());
+const V = 'pbi:visual:p1/v1';
+const P = 'pbi:page:p1';
+const into = (target, kind) => g.edges.filter(e => e.target === target && (!kind || e.kind === kind));
+const edgeFrom = (source, column, target) => g.edges
+    .find(e => e.source === source && e.target === target && (column == null || e.sourceColumn === column));
+
+const fpNode = g.nodes['pbi:table:Chooser'];
+check('the parameter table says it is one', !!fpNode?.meta?.fieldParameter);
+check('and carries its rows for the panel to show',
+    (fpNode?.meta?.fieldParameter?.items || []).length === 3,
+    JSON.stringify((fpNode?.meta?.fieldParameter?.items || []).map(i => i.caption)));
+
+/*
+ * A row resolves to a node or it does not, and which it is has to be recorded
+ * rather than inferred from an edge's absence — a broken row and a row nobody
+ * uses look identical from the edge list.
+ */
+const byCaption = c => (fpNode?.meta?.fieldParameter?.items || []).find(i => i.caption === c);
+check('a row pointing at a column resolves to that column',
+    byCaption('Alpha')?.targetId === 'pbi:table:t_dim' &&
+    byCaption('Alpha')?.targetKind === 'column',
+    `${byCaption('Alpha')?.targetId} (${byCaption('Alpha')?.targetKind})`);
+check('a row with no table resolves to the measure that answers to the name',
+    byCaption('Gamma')?.targetId === 'pbi:measure:t_metrics[mTotal]' &&
+    byCaption('Gamma')?.targetKind === 'measure',
+    `${byCaption('Gamma')?.targetId} (${byCaption('Gamma')?.targetKind})`);
+check('a row pointing at nothing says so, rather than going quiet',
+    byCaption('Ghost')?.targetId === null && byCaption('Ghost')?.targetKind === null,
+    JSON.stringify(byCaption('Ghost')));
+
+/*
+ * The point of the whole exercise. Neither of these edges exists in the file:
+ * the visual names the parameter's column and nothing else, so without them a
+ * measure a reader reaches through the slicer is reported as used by no visual.
+ */
+const viaColumn = edgeFrom('pbi:table:t_dim', 'colA', V);
+const viaMeasure = edgeFrom('pbi:measure:t_metrics[mTotal]', null, V);
+check('a column the parameter can swap in reaches the visual', !!viaColumn,
+    into(V).map(e => `${e.source}[${e.sourceColumn}]`).join(' · '));
+check('a measure the parameter can swap in reaches the visual', !!viaMeasure);
+check('and both say they arrived through the parameter',
+    viaColumn?.viaParameter === 'Chooser' && viaMeasure?.viaParameter === 'Chooser',
+    `${viaColumn?.viaParameter} / ${viaMeasure?.viaParameter}`);
+// The page carries what its visuals carry, or a parameter is invisible at the
+// zoom level most readers work at.
+check('the page inherits them, like any other field',
+    !!edgeFrom('pbi:table:t_dim', 'colA', P) && !!edgeFrom('pbi:measure:t_metrics[mTotal]', null, P));
+check('a row that resolves to nothing mints no edge',
+    !g.edges.some(e => e.sourceColumn === 'colGone'));
+
+/*
+ * The parameter is also a thing in its own right — a reader looks for it by
+ * name and asks where it is used. Passing its edges through to the real fields
+ * must not cost it its own.
+ */
+check('the parameter keeps its own edge to the visual',
+    !!edgeFrom('pbi:table:Chooser', 'Chooser', V));
+
+/*
+ * Which row is showing. Recorded by the report, thrown away until now, and the
+ * only honest way to distinguish what the visual reads today from what it can
+ * be made to read.
+ */
+const shown = g.nodes[V]?.meta?.fieldParameters || [];
+check('the visual records that a parameter drives it',
+    shown.length === 1 && shown[0].table === 'Chooser', JSON.stringify(shown));
+check('and which row was showing when the report was saved',
+    shown[0]?.selected === 'Alpha', String(shown[0]?.selected));
+
+// A visual with no parameter must gain nothing, so no caller has to ask.
+check('an ordinary visual is left alone',
+    g.nodes[V] && !('fieldParameters' in (g.nodes['pbi:page:p1']?.meta || {})));
+
 console.log(`\n${failures === 0
     ? `All ${'field parameter'} checks passed.`
     : `${failures} field parameter check(s) failed.`}`);

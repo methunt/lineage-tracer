@@ -79,6 +79,71 @@ function buildPbiGraph(pbip) {
         });
     }
 
+    /*
+     * Field parameters, resolved to the nodes their rows point at.
+     *
+     * A row names a field without reading it, so nothing else in the model
+     * records the dependency. Resolution has to happen here, against the whole
+     * model, because a row may name its target with a table or without one —
+     * the unqualified form being how a measure is normally written.
+     *
+     * Resolution is recorded on the row, including its failure. A row pointing
+     * at a field that no longer exists and a row nobody uses are the same shape
+     * once you are looking at the edge list, and only one of them is a problem.
+     */
+    const measureHome = new Map();          // lower(measure name) -> table name
+    for (const table of model.tables || []) {
+        for (const measure of table.measures || []) {
+            if (!measureHome.has(lower(measure.name))) measureHome.set(lower(measure.name), table.name);
+        }
+    }
+    const columnsByTable = new Map();       // lower(table) -> {name, columns: Set}
+    for (const table of model.tables || []) {
+        columnsByTable.set(lower(table.name), {
+            name: table.name,
+            columns: new Set((table.columns || []).map(c => lower(c.name))),
+        });
+    }
+
+    const resolveParameterRow = item => {
+        const name = lower(item.targetName);
+        // Unqualified brackets are a measure, always: that is what the syntax
+        // means, and it is the form a parameter over measures is written in.
+        if (!item.targetTable) {
+            const home = measureHome.get(name);
+            return home
+                ? { targetId: measureId(home, item.targetName), targetKind: 'measure', homeTable: home }
+                : { targetId: null, targetKind: null, homeTable: null };
+        }
+        const table = columnsByTable.get(lower(item.targetTable));
+        if (!table) return { targetId: null, targetKind: null, homeTable: null };
+        // A qualified name may be either, and a measure wins — Power BI will not
+        // let a table hold a measure and a column of one name.
+        const measureTable = (model.tables || []).find(t =>
+            lower(t.name) === lower(item.targetTable) &&
+            (t.measures || []).some(m => lower(m.name) === name));
+        if (measureTable) {
+            return {
+                targetId: measureId(measureTable.name, item.targetName),
+                targetKind: 'measure', homeTable: measureTable.name,
+            };
+        }
+        if (!table.columns.has(name)) return { targetId: null, targetKind: null, homeTable: null };
+        return { targetId: tableId(table.name), targetKind: 'column', homeTable: table.name };
+    };
+
+    const parametersByTable = new Map();    // lower(fp table) -> {name, markerColumn, items}
+    for (const table of model.tables || []) {
+        if (!table.fieldParameter) continue;
+        parametersByTable.set(lower(table.name), {
+            name: table.name,
+            markerColumn: table.fieldParameter.markerColumn || null,
+            items: (table.fieldParameter.items || []).map(item => ({
+                ...item, ...resolveParameterRow(item),
+            })),
+        });
+    }
+
     const renamesByTable = new Map();
     for (const row of physicalIndex) {
         if (lower(row.physicalColumn) === lower(row.modelColumn)) continue;
@@ -126,6 +191,9 @@ function buildPbiGraph(pbip) {
                 physicalSource: phys,
                 relation: phys ? [phys.database, phys.schema, phys.table].filter(Boolean).join('.') : null,
                 renames: renamesByTable.get(lower(table.name)) || [],
+                // Present only on a field parameter, so a reader — and the
+                // panel — can tell one from a table that merely looks odd.
+                fieldParameter: parametersByTable.get(lower(table.name)) || null,
                 relationshipCount: (table.columns || [])
                     .reduce((n, c) => n + (relationshipsByColumn.get(relKey(table.name, c.name))?.length || 0), 0),
                 tags: [],
@@ -493,6 +561,48 @@ function buildPbiGraph(pbip) {
         const vId = visualId(visual.pageId, visual.visualId);
         if (!nodes[vId]) continue;
         const pId = visualPage.get(vId);
+
+        /*
+         * A visual driven by a field parameter reads whichever row the reader
+         * picks, but the file records only the row that was showing when the
+         * report was saved — as an ordinary field reference, so the graph looks
+         * complete and is not. Every row gets an edge, or a measure reachable
+         * only through the slicer is reported as used by nothing.
+         *
+         * `viaParameter` rides along so the difference stays visible; the edges
+         * are otherwise ordinary, which is what lets the impact walk, the
+         * highlighting and the filters count them without knowing about any of
+         * this. The row that *is* showing already has a direct edge from the
+         * pass below, and the deduplication keeps that one.
+         */
+        const driving = [];
+        for (const field of visual.fields || []) {
+            const param = field.type === 'column' && parametersByTable.get(lower(field.table));
+            if (!param || driving.some(p => p.table === param.name)) continue;
+            const sel = (visual.fpSelections || {})[param.name];
+            const chosen = sel && sel.selectedIndex != null
+                ? param.items.find(i => i.order === sel.selectedIndex) : null;
+            driving.push({
+                table: param.name,
+                items: param.items.length,
+                selected: chosen ? chosen.caption : null,
+            });
+            for (const item of param.items) {
+                if (!item.targetId || !nodes[item.targetId]) continue;
+                const column = item.targetKind === 'column' ? item.targetName : '';
+                for (const [target, kind] of [[vId, 'visual'], [pId, 'page']]) {
+                    if (!target) continue;
+                    pushEdge(edges, {
+                        source: item.targetId, target,
+                        sourceColumn: column, targetColumn: '',
+                        kind: `${item.targetKind === 'measure' ? 'measure' : 'column'}_to_${kind}`,
+                        viaParameter: param.name,
+                    });
+                }
+            }
+        }
+        if (driving.length) nodes[vId].meta.fieldParameters = driving;
+
         for (const field of visual.fields || []) {
             if (!field?.table || !field?.name) continue;
             /*
