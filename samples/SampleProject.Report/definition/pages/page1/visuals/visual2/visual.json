@@ -32,6 +32,34 @@
                                 }
                             },
                             "queryRef": "Sales.Order Count"
+                        },
+                        {
+                            "field": {
+                                "Measure": {
+                                    "Expression": {
+                                        "SourceRef": {
+                                            "Entity": "Sales"
+                                        }
+                                    },
+                                    "Property": "Total Revenue"
+                                }
+                            },
+                            "queryRef": "Sales.Total Revenue",
+                            "displayName": "Grand Total"
+                        },
+                        {
+                            "field": {
+                                "Column": {
+                                    "Expression": {
+                                        "SourceRef": {
+                                            "Entity": "Sales"
+                                        }
+                                    },
+                                    "Property": "UnitPrice"
+                                }
+                            },
+                            "queryRef": "Sales.UnitPrice",
+                            "displayName": "Price per Unit"
                         }
                     ]
                 }

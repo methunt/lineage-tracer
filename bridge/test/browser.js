@@ -251,6 +251,62 @@ async function buildSampleReport() {
         (await page.locator('.col-row.is-selected').count()) > 0);
 
     /*
+     * A field renamed inside a visual, found by the name only the report uses.
+     *
+     * The label on a chart is often the one thing a reader can quote, and the
+     * model has never heard of it. jsdom cannot stand in for this: the palette
+     * positions its rows by arithmetic against a fixed row height, so a match
+     * that renders but overlaps its neighbour is a real failure that only a
+     * layout engine sees.
+     */
+    await page.keyboard.press('Control+k');
+    /* The palette keeps its facets between openings and the attribute test above
+       left it narrowed to dbt columns, which no measure can match through — the
+       check would fail on the test's own state. Same trap as the layout check
+       further down. */
+    const clearForAlias = page.locator('[data-testid="search-palette"] button', { hasText: /^clear$/ });
+    if (await clearForAlias.count()) await clearForAlias.click();
+    await page.locator('[data-testid="palette-input"]').fill('Grand Total');
+    await page.waitForTimeout(500);
+    const aliasHit = page.locator('[data-testid="palette-result"]')
+        .filter({ has: page.locator('[data-testid="palette-aka"]') });
+    check('the palette finds a field by the label a visual renamed it to',
+        (await aliasHit.count()) === 1,
+        (await page.locator('[data-testid="palette-result"]').allInnerTexts()).join(' / '));
+    // The model's name, not the label — the row has to name what a change breaks.
+    check('an alias match still shows the model\'s own name',
+        (await aliasHit.first().innerText()).includes('Total Revenue'));
+    await aliasHit.first().click();
+    await page.waitForTimeout(1400);
+
+    const shownAs = await page.locator('[data-testid="shown-as-row"]').allInnerTexts();
+    check('the measure lists every label it is read under',
+        shownAs.length === 2
+        && shownAs.join(' ').includes('Grand Total') && shownAs.join(' ').includes('Revenue'),
+        shownAs.map(r => r.replace(/\n/g, ' ')).join(' / '));
+
+    /*
+     * And on the visual: the label beside the model's name, not instead of it.
+     * A row that named only the label would name something the click cannot act
+     * on — the trace works on the real identity.
+     */
+    await page.keyboard.press('Control+k');
+    // The visual holding both renamed fields, by its own title.
+    await page.locator('[data-testid="palette-input"]').fill('Total Orders');
+    await page.waitForTimeout(500);
+    await page.locator('[data-testid="palette-result"]').first().click();
+    await page.waitForTimeout(1500);
+    const renamed = (await page.locator('[data-testid="field-row"]').allInnerTexts())
+        .filter(r => r.includes('aka'));
+    check('a visual\'s field row carries the label after the model\'s name',
+        renamed.length === 2
+        // A measure and a column, so both paths through the row are covered.
+        && renamed.some(r => r.includes('Grand Total')) && renamed.some(r => r.includes('Price per Unit'))
+        // The model's name first: the click traces that, not the label.
+        && renamed.every(r => r.indexOf('[') < r.indexOf('aka')),
+        renamed.map(r => r.replace(/\n/g, ' ')).join(' / '));
+
+    /*
      * Focus mode suspends every filter so a node picked by name always appears.
      * The palette focuses whatever you pick, which put the reader one click
      * from a rail whose eyes and "Hide all" did nothing at all — they set state
