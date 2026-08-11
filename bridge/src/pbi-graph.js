@@ -319,9 +319,71 @@ function buildPbiGraph(pbip) {
                     table: f.table || f.entity,
                     name: f.name || f.column || f.measure || f.hierarchy,
                     role: f.projectionName || f.role || null,
+                    // What *this* visual calls the field, when the author renamed
+                    // it here. Absent on every field that is not renamed, and on
+                    // every graph built before renames were extracted — so each
+                    // reader treats absent as "no rename", not as missing data.
+                    ...(f.displayName ? { displayName: f.displayName } : {}),
+                    ...(f.displayNames?.length > 1 ? { displayNames: f.displayNames } : {}),
                 })),
             },
         };
+    }
+
+    /*
+     * ── Where each field is renamed, gathered onto the field itself ──────────
+     *
+     * A rename belongs to one projection in one visual, so it cannot simply be a
+     * property of the measure: one measure reads "Label A" in a table and
+     * "Label B" in a KPI card. But the reader arrives from the other end — they
+     * were told "Label B is wrong" and have to find the measure — so the field
+     * carries the set of names it is read under, and which visual uses which.
+     *
+     * Distinct from a table's `meta.renames`, which is the physical-to-model
+     * column rename the semantic model itself performs. That one no report
+     * reader ever sees; this one is the only name they *do* see.
+     */
+    const aliasIndex = new Map();          // "type|table|field" -> Map(alias -> sites[])
+    for (const visual of payload.visualData?.visuals || []) {
+        for (const field of visual.fields || []) {
+            const fName = field.name || field.column || field.hierarchy;
+            const fTable = field.table || field.entity;
+            if (!fName || !fTable) continue;
+            for (const alias of field.displayNames || []) {
+                const key = `${field.type}|${lower(fTable)}|${lower(fName)}`;
+                if (!aliasIndex.has(key)) aliasIndex.set(key, new Map());
+                const byAlias = aliasIndex.get(key);
+                if (!byAlias.has(alias)) byAlias.set(alias, []);
+                byAlias.get(alias).push({
+                    page: visual.pageName || null,
+                    visual: visual.visualName || visual.visualType || null,
+                    // Role is kept because a rename on a tooltip and a rename on
+                    // a value are not equally visible to a reader, and no single
+                    // place here should have to decide which of those counts.
+                    role: field.projectionName || null,
+                });
+            }
+        }
+    }
+
+    /** The alias list for one field, in the shape the panel renders. */
+    const aliasesFor = (type, table, name) => {
+        const byAlias = aliasIndex.get(`${type}|${lower(table)}|${lower(name)}`);
+        if (!byAlias) return [];
+        return [...byAlias.entries()].map(([alias, visuals]) => ({ name: alias, visuals }));
+    };
+
+    for (const node of Object.values(nodes)) {
+        if (node.kind === 'measure') {
+            const aliases = aliasesFor('measure', node.meta.homeTable, node.name);
+            if (aliases.length) node.meta.aliases = aliases;
+            continue;
+        }
+        if (node.kind !== 'pbiTable') continue;
+        for (const col of node.columns || []) {
+            const aliases = aliasesFor('column', node.name, col.name);
+            if (aliases.length) col.aliases = aliases;
+        }
     }
 
     // ── Edges, translated from the engine's own graph ────────────────────────
