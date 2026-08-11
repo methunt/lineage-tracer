@@ -47,6 +47,16 @@ function attrOf(node, isColumn) {
     return isColumn ? 'dbtColumn' : 'dbtModel';
 }
 
+/**
+ * The names a field is read under in the report, lowercased for matching.
+ *
+ * A field renamed inside a visual is known to its readers by a name the model
+ * has never heard of, and that name is the only one they can tell you. Absent on
+ * everything that is not renamed, and on every graph built before renames were
+ * extracted, so `|| []` is the whole compatibility story.
+ */
+const aliasesOf = source => (source?.aliases || []).map(a => a.name);
+
 /** Every node and every column, flattened once — a few thousand entries on a large project. */
 function buildIndex() {
     const rows = [];
@@ -59,6 +69,14 @@ function buildIndex() {
             attr: attrOf(node, false),
             layer: node.layer,
             tags: node.meta?.tags || [],
+            /*
+             * Searchable, but never the label. Emitting one row per alias would
+             * put the same measure in the list three times under three names,
+             * and the prefix-and-length sort would interleave them; folding the
+             * aliases into the label would corrupt both the display and the
+             * sort. So the row keeps its real identity and matches on the side.
+             */
+            aliases: aliasesOf(node.meta),
             node,
         });
         for (const col of node.columns || []) {
@@ -70,6 +88,7 @@ function buildIndex() {
                 attr: attrOf(node, true),
                 layer: node.layer,
                 tags: node.meta?.tags || [],
+                aliases: aliasesOf(col),
                 node,
                 dataType: col.dataType,
             });
@@ -195,10 +214,25 @@ export default function SearchPalette() {
             if (tags.size && !row.tags.some(t => tags.has(t))) continue;
             if (needle) {
                 const hay = row.label.toLowerCase();
-                if (!hay.includes(needle)) continue;
-                // Prefix matches first, then shorter names: `Region` should not put
-                // `RegionCategoryGlobalKey` above `Region`.
-                out.push([hay.startsWith(needle) ? 0 : 1, row.label.length, row]);
+                if (hay.includes(needle)) {
+                    // Prefix matches first, then shorter names: `Region` should not put
+                    // `RegionCategoryGlobalKey` above `Region`.
+                    out.push([hay.startsWith(needle) ? 0 : 1, row.label.length, row]);
+                    continue;
+                }
+                /*
+                 * Then the names the report renamed it to. Ranked below every
+                 * real-name match, because the model's own name is the stronger
+                 * signal — someone typing a word that is also a real measure
+                 * name wants that measure before one merely labelled that way in
+                 * a card. The matched alias rides on a copy of the
+                 * row: the index is memoised and shared, and writing the match
+                 * onto it would leak one query's alias into the next.
+                 */
+                const alias = row.aliases?.find(a => a.toLowerCase().includes(needle));
+                if (!alias) continue;
+                const rank = alias.toLowerCase().startsWith(needle) ? 2 : 3;
+                out.push([rank, row.label.length, { ...row, matchedAlias: alias }]);
             } else {
                 out.push([1, row.label.length, row]);
             }
@@ -427,8 +461,23 @@ export default function SearchPalette() {
                                     >
                                         <Icon size="sm" style={{ color: KIND_COLOR[row.node.kind] }} />
                                         <span className="truncate mono" style={{ color: 'var(--text)' }}>{row.label}</span>
+                                        {/* The row is found under a name the model
+                                            does not use, so say which — otherwise
+                                            it reads as a result that does not
+                                            match what was typed. Appended to the
+                                            hint rather than replacing it: a bare
+                                            column name with the alias in place of
+                                            its table says what it is called but
+                                            not where it lives. Both share the one
+                                            line the virtual list positions by, so
+                                            the fixed row height still holds. */}
                                         <span className="truncate flex-1" style={{ color: 'var(--muted)', fontSize: 'var(--fs-sm)' }}>
                                             {row.hint}
+                                            {row.matchedAlias && (
+                                                <span data-testid="palette-aka">
+                                                    {row.hint ? ' · ' : ''}aka “{row.matchedAlias}”
+                                                </span>
+                                            )}
                                         </span>
                                         <span className="flex-none" style={{ color: 'var(--muted)', fontSize: 'var(--fs-sm)' }}>
                                             {ATTR_FULL[row.attr]}
