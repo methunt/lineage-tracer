@@ -125,12 +125,12 @@ crossed by hand.
 
 <br>
 
-| | Persona | What you get out of it |
-|---|---|---|
-| 🛠️ | **Analytics engineer** | The pre-change answer. Blast radius on a real graph before you touch the model, banded **High / Medium / Low**, with raw counts always visible. |
-| 📊 | **BI developer** | The post-break answer. Start at the broken visual and walk back to the model that owns the field, reading the actual DAX and M on the way. |
-| 🧭 | **Data platform lead** | The boundary audit. Which semantic tables have no warehouse source, which join keys have no dbt column, which wide-reach columns have no dbt test. |
-| 🔍 | **Reviewer or auditor** | An exportable artifact: one HTML file, no server, that shows how a number reached a page. |
+| | Persona | You want to ask… | You get… |
+|---|---|---|---|
+| 🛠️ | **Analytics engineer** | "If I change this dbt model, what breaks downstream?" | A list of exactly which Power BI measures and visuals are affected — **before** you make the change, not after someone complains. |
+| 📊 | **BI developer** | "This visual looks wrong — where does its data actually come from?" | A click-through path from the visual, back through its measure and table, to the dbt model and the compiled SQL that built it. |
+| 🧭 | **Data platform lead** | "Where are the gaps between what dbt builds and what Power BI reads?" | A checklist of tables with no dbt source, keys with no dbt column, and untested columns that a lot depends on. |
+| 🔍 | **Reviewer or auditor** | "Can you show me how this number was produced?" | One HTML file you can send by email — open it, no install, no login, and it shows the whole chain. |
 
 ---
 
@@ -532,7 +532,7 @@ anything sensitive.
 | | Path | What is in it |
 |---|---|---|
 | 🧠 | `bridge/` | The tool: extractors, the join, impact, and the UI. |
-| 📦 | `dbt-colibri/` | Vendored upstream, unmodified. |
+| 📦 | `dbt-colibri/` | Vendored from upstream, pruned, and **maintained here** — a handful of fixes to its lineage-resolution logic live in this tree rather than upstream. See [`dbt-colibri/README.md`](dbt-colibri/README.md). |
 | 🎨 | `assets/` | The light/dark SVGs on this page. |
 | 🛠️ | `scripts/` | The generators that produce them, driven by [`scripts/readme-assets.json`](scripts/readme-assets.json). |
 
@@ -561,12 +561,14 @@ the shape of the problem with invented names instead.
 
 MIT — © 2026 Methun T. Full text in [LICENSE](LICENSE).
 
-This project uses two other people's work, and neither upstream is modified —
-that is what lets a newer version be re-vendored without a merge.
+This project uses two other people's work. The Power BI parsers are unmodified
+upstream code; dbt-colibri carries a small set of local fixes on top of
+upstream, documented so re-vendoring a newer release doesn't silently drop
+them — see [`dbt-colibri/README.md`](dbt-colibri/README.md).
 
 | Project | Licence | Where it lives |
 |---|---|---|
-| [dbt-colibri](https://github.com/b-ned/dbt-colibri) | MIT, © 2024 Canva OpenSource | [`dbt-colibri/`](dbt-colibri/) — imported as a library, unmodified. [Licence](dbt-colibri/LICENSE) |
+| [dbt-colibri](https://github.com/b-ned/dbt-colibri) | MIT, © 2024 Canva OpenSource | [`dbt-colibri/`](dbt-colibri/) — imported as a library, with local fixes. [Licence](dbt-colibri/LICENSE) |
 | [pbip-documenter](https://github.com/JonathanJihwanKim/pbip-documenter) | MIT, © 2026 Jihwan Kim | [`bridge/src/pbip/`](bridge/src/pbip/) — the four parsers, adopted and maintained here. [Licence](bridge/src/pbip/LICENSE) |
 
 Each adopted parser names its origin and its copyright holder in a header
