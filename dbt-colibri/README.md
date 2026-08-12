@@ -40,10 +40,12 @@ src/dbt_colibri/
   utils/parsing_utils.py
 ```
 
-That is the whole reachable import graph from `dbt_extract.py`. **The contents
-of these files are unmodified upstream code** — the project deliberately does
-not fork colibri's logic. Everything our side needs to change is done by
-subclassing in `bridge/src/dbt_extract.py`.
+That is the whole reachable import graph from `dbt_extract.py`. **Most of
+these files are unmodified upstream code** — the project's default is to
+change behavior by subclassing in `bridge/src/dbt_extract.py` rather than
+forking colibri's logic. `extractor.py` and `lineage.py` are the exception:
+see "Local patches" below for the handful of places that diverge from
+upstream, and why subclassing wasn't enough for them.
 
 ## What was removed from upstream, and why
 
@@ -60,8 +62,43 @@ Whole files only — nothing was pruned *inside* a retained module.
 build/test/publish config) and kept only as a provenance record — see the
 comment at the top of that file. It is not used to build or install anything.
 
+## Local patches
+
+Unlike the rest of this copy, `extractor.py` and `lineage.py` carry fixes made
+directly against upstream's logic rather than through the `dbt_extract.py`
+subclass. Each is a case where the extractor's own resolution logic — not just
+how our side calls it — was silently dropping or breaking lineage:
+
+- **A model missing from `catalog.json`** (a stale or partial catalog, or a
+  materialization the adapter doesn't always produce a catalog entry for)
+  used to make the extractor drop that model's lineage entirely. Its columns
+  are now derived from its compiled SQL instead, the same way the extractor
+  already handled ephemeral models — which never appear in `catalog.json` by
+  definition and already needed this.
+- **A T-SQL/Synapse `OPENROWSET(...)` read of an external file** isn't valid
+  grammar in sqlglot's `tsql` dialect and raised a parse error that took down
+  lineage for the *entire* model containing it, not just that one reference.
+  The call (and its optional `WITH (...)` column-schema clause) is now stubbed
+  to a placeholder identifier before parsing.
+- **One unresolvable branch of a large `UNION ALL`** (e.g. a `SELECT *` whose
+  source table can't be resolved) crashed lineage resolution for every column
+  of the whole model, including its resolvable sibling branches, because the
+  branches ended up with inconsistent column counts. An unresolvable branch is
+  now skipped instead of crashing.
+- **A parent referenced as a two-part `schema.table`** (no database prefix)
+  could fail to resolve even when the schema held only one unambiguous
+  database for that pair, because sqlglot's qualifier fills in the schema but
+  not the catalog. A schema.table-only lookup now covers this case, but only
+  when it is unambiguous — an identical schema.table pair in two different
+  databases is left unresolved rather than guessed.
+
+Diffing against upstream will show these as real deviations. That's expected
+— re-check they're still present (and still needed) rather than reverting
+them wholesale.
+
 ## Updating this copy
 
-Diff against the upstream tag, copy the files listed above, re-check that the
-import graph has not grown a new module, then re-run `node scripts/pack-python.mjs`
-from `bridge/` and run `npm test`.
+Diff against the upstream tag, copy the files listed above, then reapply the
+local patches described above (they will not survive a plain file copy),
+re-check that the import graph has not grown a new module, then re-run
+`node scripts/pack-python.mjs` from `bridge/` and run `npm test`.
