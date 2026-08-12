@@ -6,6 +6,7 @@ import {
 import { useStore, ADJ, DATA, resourceOf } from './store';
 import { elkOrder, place, nodeHeight, WIDTH } from './layout';
 import GraphNode from './GraphNode';
+import LineageEdge from './LineageEdge';
 import { KIND_COLOR, topLayer } from './theme';
 import { revealOptions } from './reveal';
 import {
@@ -14,6 +15,7 @@ import {
 } from './icons';
 
 const nodeTypes = { lineage: GraphNode };
+const edgeTypes = { lineage: LineageEdge };
 
 // Above this, node position transitions are dropped: animating several hundred
 // transforms at once drops frames, and a stuttering canvas reads as broken
@@ -576,6 +578,7 @@ function Canvas() {
                 id: `e${first._i}`,
                 source: first.source,
                 target: first.target,
+                type: 'lineage',
                 className: [
                     group.some(e => e.provenance === 'declared') ? 'is-declared' : '',
                     lit ? 'is-lit' : '',
@@ -601,7 +604,6 @@ function Canvas() {
                         ? { '--reveal-delay': `${Math.min(depth * 40, 240)}ms` }
                         : null),
                 },
-                type: 'default',
             };
         });
     }, [shown, highlight]);
@@ -699,6 +701,7 @@ function Canvas() {
                 nodes={liveNodes}
                 edges={rfEdges}
                 nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
                 onNodesChange={onNodesChange}
                 onPaneClick={() => select(null)}
                 minZoom={0.05}
