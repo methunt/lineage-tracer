@@ -194,14 +194,21 @@ def to_node(
     visited.add(key)
 
     # Find the specific select clause that is the source of the column we want.
-    select = (
-        scope.expression.selects[column]
-        if isinstance(column, int)
-        else next(
+    if isinstance(column, int):
+        # A sibling branch of a UNION whose own `SELECT *` never expanded
+        # (e.g. its source table couldn't be resolved against the schema)
+        # has fewer selects than the branches that did expand. Rather than
+        # crash the whole column — and with it every other, resolvable
+        # branch of the union — treat this branch as contributing no
+        # lineage.
+        if column >= len(scope.expression.selects):
+            return None
+        select = scope.expression.selects[column]
+    else:
+        select = next(
             (select for select in scope.expression.selects if select.alias_or_name == column),
             exp.Star() if scope.expression.is_star else scope.expression,
         )
-    )
     lineage_type = classify_column_lineage(select)
     if isinstance(scope.expression, exp.Subquery):
         for source in scope.subquery_scopes:

@@ -168,11 +168,13 @@ const CSP = [
      * browser test passes without it.
      */
     "script-src 'self' https://cdn.jsdelivr.net/pyodide/",
-    // The module worker and the service worker are both our own files. Not
-    // redundant with script-src: worker-src falls back to script-src, so
-    // without this line the jsDelivr prefix above would also be a permitted
-    // source of workers.
-    "worker-src 'self'",
+    // The dbt/service workers are our own files ('self'); the ELK layout
+    // worker (elk-worker.js) is built via `?worker&inline` specifically so it
+    // still works in the exported single-file viewer, which means it
+    // constructs from a blob: URL here too — not redundant with script-src:
+    // worker-src falls back to script-src, so without this line the jsDelivr
+    // prefix above would also be a permitted source of workers.
+    "worker-src 'self' blob:",
     /*
      * The privacy claim lives in this line, for everything on the main thread.
      * `'self'` is the vendored sqlglot wheel and the extractor sources; the
@@ -234,6 +236,13 @@ const VIEWER_CSP = [
     "default-src 'none'",
     // The inlined IIFE bundle and the injected graph. Both are the file itself.
     "script-src 'unsafe-inline'",
+    // The ELK layout solve runs in a worker so a large graph does not freeze
+    // the tab; `?worker&inline` (layout.js) builds it as a blob: URL so it
+    // still works with no server behind this file. worker-src otherwise falls
+    // back to script-src, and 'unsafe-inline' there does not cover blob:
+    // workers — confirmed live in Chromium, which blocks the construction and
+    // logs it as a CSP violation rather than merely failing silently.
+    "worker-src blob:",
     // The stylesheet is inlined as a <style> block; React Flow positions nodes
     // with style attributes, which fall back to this directive.
     "style-src 'unsafe-inline'",
