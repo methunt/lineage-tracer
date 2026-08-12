@@ -58,6 +58,9 @@ class DbtColumnLineageExtractor:
         self._quoted_columns_lookup = self._build_quoted_columns_lookup()
         self.nodes_with_columns = self.build_nodes_with_columns()
         self._table_to_node = {k.lower(): v for k, v in self.nodes_with_columns.items()}
+        # A schema.table (no catalog/db) index, for references sqlglot's
+        # qualifier leaves catalog-less — see _schema_table_to_node.
+        self._schema_table_to_node = self._build_schema_table_to_node()
         # Store references to parent and child maps for easy access
         self.parent_map = self.manifest.get("parent_map", {})
         self.child_map = self.manifest.get("child_map", {})
@@ -295,6 +298,34 @@ class DbtColumnLineageExtractor:
                 continue
         return mapping
     
+    def _build_schema_table_to_node(self):
+        """Index every node by ``schema.table`` (no catalog/db), for table
+        references sqlglot's qualifier leaves catalog-less.
+
+        sqlglot's ``qualify`` fills in a table's schema when it can resolve
+        it against the schema dict, but it does not backfill the catalog
+        (database) part of a two-part ``schema.table`` reference even when
+        the schema dict holds only one database — so
+        ``get_dbt_node_from_sqlglot_table_node``'s ``catalog.db.name`` lookup
+        key never matches, and a node that dbt itself resolves fine turns
+        into an unresolved stub. Only unambiguous schema.table pairs are
+        kept: if two different databases each have their own
+        ``schema.table`` colliding on this shorter key, guessing which one
+        the query means would be worse than not resolving it.
+        """
+        by_schema_table = {}
+        for relation_name, match in self._table_to_node.items():
+            parts = relation_name.split(".")
+            if len(parts) != 3:
+                continue
+            schema_table = ".".join(parts[1:])
+            existing = by_schema_table.get(schema_table, "unset")
+            if existing == "unset":
+                by_schema_table[schema_table] = match
+            elif existing is not None and existing["unique_id"] != match["unique_id"]:
+                by_schema_table[schema_table] = None  # ambiguous — don't guess
+        return {k: v for k, v in by_schema_table.items() if v is not None}
+
     def _generate_schema_dict_from_catalog(self, catalog=None):
         if not catalog:
             catalog = self.catalog
@@ -404,14 +435,25 @@ class DbtColumnLineageExtractor:
     # ------------------------------------------------------------------
 
     def _build_ephemeral_registry(self):
-        """Index every ephemeral model from the manifest.
+        """Index every model from the manifest that can have its columns
+        derived from compiled SQL: ephemeral models (which never appear in
+        catalog.json by definition) and, as a fallback, every other model
+        too, in case catalog.json is stale or partial and is missing a node
+        that *did* materialize. dbt's own docs site draws lineage straight
+        from manifest.json regardless of catalog presence; this registry
+        lets us do the same instead of dropping the edge when catalog.json
+        doesn't have the parent.
+
+        Catalog entries still take priority wherever they exist — this
+        registry is only consulted as a fallback (see
+        ``_get_parent_nodes_catalog`` and ``_get_list_of_columns_for_a_dbt_node``).
 
         Stores enough metadata to (a) resolve columns from SQL on demand and
         (b) inject synthesized schema entries for downstream qualification.
         """
         registry = {}
         for node_id, node in self.manifest.get("nodes", {}).items():
-            if node.get("config", {}).get("materialized") != "ephemeral":
+            if node.get("resource_type") not in ("model", "snapshot"):
                 continue
             registry[node_id] = {
                 "unique_id": node_id,
@@ -609,6 +651,12 @@ class DbtColumnLineageExtractor:
         stub so that sqlglot lineage stops at the ephemeral boundary instead of
         tracing through the inlined SQL into transitive ancestors.
         """
+        # This is the first parse of a model's raw compiled SQL — dialect
+        # constructs sqlglot cannot parse (e.g. tsql's OPENROWSET) must be
+        # stubbed out here too, not just in _sanitize_sql_for_parsing, or
+        # this call blows up before that later sanitization ever runs.
+        if self.dialect == "tsql":
+            sql = self._stub_openrowset(sql)
         parsed = maybe_parse(sql, dialect=self.dialect)
         changed = False
         for cte in parsed.find_all(exp.CTE):
@@ -708,6 +756,77 @@ class DbtColumnLineageExtractor:
         pieces.append(sql[last_end:])
         return "".join(pieces)
 
+    def _stub_openrowset(self, sql):
+        """Replace ``OPENROWSET(...)`` calls with a bare placeholder identifier.
+
+        Synapse/SQL Server's ``OPENROWSET(BULK '...', DATA_SOURCE = ...,
+        FORMAT = 'PARQUET')`` reads an external data-lake file directly — it
+        has no dbt-tracked parent, and sqlglot's tsql grammar does not parse
+        its ``BULK``/``DATA_SOURCE``/``FORMAT`` option syntax at all, which
+        raises a ``ParseError`` that previously took down lineage extraction
+        for the *entire* model (parsing happens once, outside the per-column
+        fallback). Swapping the call for a plain identifier keeps the rest of
+        the query — including whatever alias and pseudo-columns like
+        ``result.filepath(1)`` follow it — parseable; those columns simply
+        end up with no resolvable parent, which is correct for a raw file
+        read.
+        """
+        if "openrowset" not in sql.lower():
+            return sql
+
+        pattern = re.compile(r"(?i)\bopenrowset\s*\(")
+        pieces = []
+        last_end = 0
+        counter = 0
+        changed = False
+        pos = 0
+        while True:
+            match = pattern.search(sql, pos)
+            if not match:
+                break
+            depth = 1
+            i = match.end()
+            while i < len(sql) and depth > 0:
+                if sql[i] == "(":
+                    depth += 1
+                elif sql[i] == ")":
+                    depth -= 1
+                i += 1
+            if depth != 0:
+                # Unbalanced parens — bail out and leave the SQL untouched
+                # rather than risk mangling it.
+                return sql
+
+            # OPENROWSET's own explicit column-schema clause —
+            # ``WITH ([col] type, [col] type, ...)`` — immediately follows
+            # the call. It is part of OPENROWSET's syntax, not a standalone
+            # table hint, so sqlglot cannot parse it once the call itself
+            # has been replaced with a plain identifier; consume it too.
+            with_match = re.match(r"\s*(?i:with)\s*\(", sql[i:])
+            if with_match:
+                w_depth = 1
+                j = i + with_match.end()
+                while j < len(sql) and w_depth > 0:
+                    if sql[j] == "(":
+                        w_depth += 1
+                    elif sql[j] == ")":
+                        w_depth -= 1
+                    j += 1
+                if w_depth == 0:
+                    i = j
+
+            counter += 1
+            pieces.append(sql[last_end:match.start()])
+            pieces.append(f"__colibri_openrowset_{counter}__")
+            last_end = i
+            pos = i
+            changed = True
+
+        if not changed:
+            return sql
+        pieces.append(sql[last_end:])
+        return "".join(pieces)
+
     def _sanitize_sql_for_parsing(
         self,
         sql,
@@ -723,6 +842,9 @@ class DbtColumnLineageExtractor:
                 selected_columns=selected_columns,
                 model_node=model_node,
             )
+
+        if self.dialect == "tsql":
+            sql = self._stub_openrowset(sql)
 
         if self.dialect != "oracle":
             return sql
@@ -957,6 +1079,13 @@ class DbtColumnLineageExtractor:
             table_name = f"{node.source.catalog}.{node.source.db}.{node.source.name}"
 
         match = self._table_to_node.get(table_name.lower())
+        if not match and not node.source.catalog and node.source.db:
+            # sqlglot's qualifier resolved the schema.table but never
+            # backfilled the catalog, even when it was unambiguous — fall
+            # back to a schema.table-only lookup before giving up.
+            match = self._schema_table_to_node.get(
+                f"{node.source.db}.{node.source.name}".lower()
+            )
         if match:
             dbt_node = match["unique_id"]
         else:

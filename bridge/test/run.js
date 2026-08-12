@@ -73,6 +73,17 @@ function check(name, pass, detail) {
     console.log('\n— folder tree —');
     failures += await require('./tree').run();
 
+    // dbt-colibri's extractor, in Python: a manifest node missing from
+    // catalog.json must still resolve as a lineage parent (matching what
+    // dbt's own docs site does straight from manifest.json), a T-SQL/Synapse
+    // OPENROWSET read must not take down lineage for the whole model, one
+    // unresolvable UNION branch must not take down its resolvable siblings,
+    // and a catalog-less schema.table reference must resolve when the
+    // schema is unambiguous. See test/python/ for the real-manifest bugs
+    // each of these guards against.
+    console.log('\n— dbt-colibri extractor —');
+    failures += require('./dbt-catalog-fallback').failures;
+
     console.log('\nBuilding from samples/…\n');
     const graph = await build({
         pbip: SAMPLES,
