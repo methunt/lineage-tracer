@@ -52,10 +52,6 @@ const PBI_LANE = { pbiTable: 'powerbi', measure: 'measures', page: 'pages', visu
 const laneOf = node => (node.origin === 'pbi'
     ? PBI_LANE[node.kind] || 'powerbi'
     : topLayer(node.layer));
-const laneOrder = layers => [
-    ...new Set(layers.filter(l => l !== 'powerbi').map(topLayer)),
-    'powerbi', 'measures', 'pages', 'visuals',
-];
 
 const DEPTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, Infinity];
 const LARGE_EXPANSION = 150;
@@ -360,7 +356,6 @@ function Canvas() {
     const blank = useStore(s => s.blank);
     const showEverything = useStore(s => s.showEverything);
     const setPaletteOpen = useStore(s => s.setPaletteOpen);
-    const layerOrder = useStore(s => s.layerOrder);
     const expanded = useStore(s => s.expanded);
     const highlight = useStore(s => s.highlight);
     const selection = useStore(s => s.selection);
@@ -384,7 +379,6 @@ function Canvas() {
     // Set when a solve finishes, consumed once its layout has been painted.
     const wantFit = React.useRef(false);
 
-    const lanes = useMemo(() => laneOrder(layerOrder), [layerOrder]);
     const fit = useCallback(
         () => fitView({ padding: 0.12, duration: 300, minZoom: 0.45, maxZoom: 1 }),
         [fitView]
@@ -402,10 +396,10 @@ function Canvas() {
         let cancelled = false;
 
         const run = () => elkOrder(visibleNodes, visibleEdges)
-            .then(elkY => {
+            .then(elkResult => {
                 if (cancelled) return;
-                setOrder({ nodes: visibleNodes, elkY });
-                globalThis.__LINEAGE_DEBUG__ = { visible: visibleNodes.length, positioned: elkY.size };
+                setOrder({ nodes: visibleNodes, elk: elkResult });
+                globalThis.__LINEAGE_DEBUG__ = { visible: visibleNodes.length, positioned: elkResult.y.size };
                 /*
                  * Ask for a fit; do not perform one here.
                  *
@@ -424,7 +418,7 @@ function Canvas() {
                 if (cancelled) return;
                 globalThis.__LINEAGE_DEBUG__ = { visible: visibleNodes.length, error: String(err?.message || err) };
                 console.error('layout failed', err);
-                setOrder({ nodes: visibleNodes, elkY: new Map() });
+                setOrder({ nodes: visibleNodes, elk: { x: new Map(), y: new Map() } });
             });
 
         /*
@@ -464,10 +458,10 @@ function Canvas() {
     const lastGood = React.useRef({ nodes: [], edges: [], positions: new Map() });
     const positions = useMemo(() => {
         if (solving) return null;
-        const next = place(visibleNodes, order.elkY, lanes, expanded);
+        const next = place(visibleNodes, visibleEdges, order.elk, expanded);
         lastGood.current = { nodes: visibleNodes, edges: visibleEdges, positions: next };
         return next;
-    }, [solving, order, visibleNodes, visibleEdges, lanes, expanded]);
+    }, [solving, order, visibleNodes, visibleEdges, expanded]);
 
     // Edges come from the same snapshot as the nodes. Rebuilding them from the
     // new filter while the solve is in flight costs a pass over every edge in
@@ -675,7 +669,20 @@ function Canvas() {
                                 <IconSearch size="sm" /> Search for a model or column
                             </button>
                             <button className="blank-secondary" data-testid="show-everything"
-                                onClick={showEverything}>
+                                onClick={() => {
+                                    const total = Object.keys(data.nodes).length;
+                                    // Same number this screen already quotes in "This project
+                                    // has N objects" — no second, differently-derived count to
+                                    // keep in sync. Below BUSY_THRESHOLD the solve is fast
+                                    // enough that a warning would just be noise to click past.
+                                    if (total > BUSY_THRESHOLD &&
+                                        !window.confirm(
+                                            `This will lay out ${total} nodes. On a project this ` +
+                                            `size that can take a few minutes, and the tab will be ` +
+                                            `busy while it works. Continue?`
+                                        )) return;
+                                    showEverything();
+                                }}>
                                 Show everything
                             </button>
                         </div>
@@ -711,6 +718,13 @@ function Canvas() {
                 // elementsSelectable must stay true: React Flow marks node wrappers
                 // pointer-events:none when it is false, killing every click inside a node.
                 elementsSelectable
+                // Without this, "Show everything" on a large project mounts every
+                // node/edge DOM subtree in one commit regardless of what's on
+                // screen — the tab freezing at real scale (~900 nodes) was this,
+                // not the ELK solve, which already runs off-thread. This is real
+                // DOM/layout work; a worker cannot do any of it, since workers
+                // have no DOM access at all.
+                onlyRenderVisibleElements
             >
                 {pin && (
                     <Panel position="top-left">

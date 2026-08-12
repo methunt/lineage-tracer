@@ -82,6 +82,11 @@ async function buildSampleReport() {
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
     page.on('console', m => m.type() === 'error' && errors.push(m.text()));
+    // Playwright auto-dismisses (Cancels) any confirm()/alert() left unhandled —
+    // the sample project is over BUSY_THRESHOLD, so "Show everything" below
+    // pops a real confirm dialog in this real browser, and an un-accepted one
+    // silently drops the click on the floor with no error to show for it.
+    page.on('dialog', d => d.accept());
 
     await page.goto(pathToFileURL(target).href, { waitUntil: 'networkidle' });
 

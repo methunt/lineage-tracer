@@ -51,6 +51,10 @@ function renderCheck(htmlPath, { settleMs = 6000 } = {}) {
             Object.defineProperty(win.HTMLElement.prototype, 'offsetWidth', { configurable: true, get: () => VIEWPORT.width });
             Object.defineProperty(win.HTMLElement.prototype, 'offsetHeight', { configurable: true, get: () => VIEWPORT.height });
             win.Worker = undefined;   // keep elkjs on its in-process path
+            // jsdom does not implement confirm() at all (logs "Not implemented"
+            // and returns undefined, i.e. Cancel) — every bulk-action confirm
+            // in the app would silently block here otherwise.
+            win.confirm = () => true;
             win.TextDecoder = TextDecoder;   // jsdom does not ship one; Node does
             win.addEventListener('error', e => errors.push(String(e.error || e.message)));
             win.addEventListener('unhandledrejection', e => errors.push(`unhandled rejection: ${e.reason?.message || e.reason}`));

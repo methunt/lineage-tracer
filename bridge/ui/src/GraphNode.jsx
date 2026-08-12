@@ -225,7 +225,16 @@ function HopMenu({ nodeId, cardKind, shown = '' }) {
     );
 }
 
-export default function GraphNode({ id, data }) {
+/*
+ * Wrapped in memo() so a re-render of the whole ReactFlow tree — a drag
+ * elsewhere on the canvas, an unrelated store change — does not re-run this
+ * component's own render for every one of several hundred cards. React
+ * Flow re-creates the `data` object handed to a node on nearly every
+ * traversal, so this only pays off because every selector inside is a
+ * primitive (see the comment below) — an object/array prop here would
+ * defeat the memo by changing identity on every render anyway.
+ */
+const GraphNode = React.memo(function GraphNode({ id, data }) {
     const { node, up = 'none', down = 'none', shown = '' } = data;
     /*
      * Every selector here resolves to a primitive on purpose.
@@ -404,6 +413,7 @@ export default function GraphNode({ id, data }) {
             <Handle type="source" position={Position.Right} />
         </div>
     );
-}
+});
 
+export default GraphNode;
 export { KIND_COLOR, KIND_LABEL };
