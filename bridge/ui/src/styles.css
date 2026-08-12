@@ -93,7 +93,10 @@
     --dur-slow: 420ms;
 
     --rail-w: clamp(200px, 18vw, 380px);
-    --panel-w: clamp(320px, 35vw, 720px);
+    /* Opens near its own drag floor (344px, set on the Resizer in App.jsx) so
+       the canvas keeps most of the width by default; a reader who wants more
+       detail room drags it out themselves. */
+    --panel-w: clamp(320px, 22vw, 400px);
 
     /* The app header, measured: 34px of brand over two lines of text, plus
        py-3. Only the landing backdrop reads it — the header itself is laid out
