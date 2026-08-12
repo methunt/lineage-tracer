@@ -93,7 +93,10 @@
     --dur-slow: 420ms;
 
     --rail-w: clamp(200px, 18vw, 380px);
-    --panel-w: clamp(320px, 35vw, 720px);
+    /* Opens near its own drag floor (344px, set on the Resizer in App.jsx) so
+       the canvas keeps most of the width by default; a reader who wants more
+       detail room drags it out themselves. */
+    --panel-w: clamp(320px, 22vw, 400px);
 
     /* The app header, measured: 34px of brand over two lines of text, plus
        py-3. Only the landing backdrop reads it — the header itself is laid out
@@ -222,23 +225,36 @@ input, select { font: inherit; color: inherit; }
     background-size: 100% 100%, 24px 24px;
 }
 .react-flow__attribution { display: none; }
+
+/* --edge-stroke lives on the wrapping <g> so both the curve and the
+   midpoint chevron (a sibling <path>, not a descendant of .react-flow__edge-path)
+   pick up the same color for the same state from one place. */
+.react-flow__edge { --edge-stroke: color-mix(in srgb, var(--muted) 42%, transparent); }
+.react-flow__edge-path,
+.lineage-edge-arrow {
+    stroke: var(--edge-stroke);
+    fill: none;
+    transition: stroke var(--dur-base) var(--ease), stroke-opacity var(--dur-base) var(--ease);
+}
 .react-flow__edge-path {
-    stroke: color-mix(in srgb, var(--muted) 42%, transparent);
     /* One curve per pair of nodes; its weight is how many columns it carries,
        set per-edge in LineageGraph.jsx and damped so a 40-column bundle is
        heavier than a 4-column one without being a slab. */
     stroke-width: calc(1.4 * var(--edge-weight, 1));
-    transition: stroke var(--dur-base) var(--ease), stroke-opacity var(--dur-base) var(--ease);
 }
-.react-flow__edge.is-dim .react-flow__edge-path { stroke-opacity: .1; }
+.lineage-edge-arrow { stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.react-flow__edge.is-dim .react-flow__edge-path,
+.react-flow__edge.is-dim .lineage-edge-arrow { stroke-opacity: .1; }
 .react-flow__edge.is-declared .react-flow__edge-path { stroke-dasharray: 5 4; }
 .react-flow__handle { opacity: 0; }
 
 /* Reached through a step that names no columns: a real dependency, drawn at
    half weight because it is the table's downstream and not provably this
    column's. Same accent, less claim. */
+.react-flow__edge.is-lit.is-inferred {
+    --edge-stroke: color-mix(in srgb, var(--accent) 55%, transparent);
+}
 .react-flow__edge.is-lit.is-inferred .react-flow__edge-path {
-    stroke: color-mix(in srgb, var(--accent) 55%, transparent);
     stroke-width: 1.8;
     stroke-dasharray: 2 5;
 }
@@ -247,13 +263,14 @@ input, select { font: inherit; color: inherit; }
 /* Lineage reveal: lit edges draw in from the selected node outward, staggered
    by graph depth so the path visibly travels rather than appearing at once.
    The dash length is set per-edge from its measured length. */
+.react-flow__edge.is-lit { --edge-stroke: var(--accent); }
 .react-flow__edge.is-lit .react-flow__edge-path {
-    stroke: var(--accent);
     stroke-width: 2.4;
     stroke-opacity: 1;
     animation: draw var(--dur-slow) var(--ease) both;
     animation-delay: var(--reveal-delay, 0ms);
 }
+.react-flow__edge.is-lit .lineage-edge-arrow { stroke-opacity: 1; }
 @keyframes draw {
     from { stroke-dasharray: 1 9999; stroke-dashoffset: 0; opacity: .2; }
     to   { stroke-dasharray: 9999 0;  stroke-dashoffset: 0; opacity: 1; }
