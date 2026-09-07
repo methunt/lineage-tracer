@@ -3,7 +3,7 @@ import { IconLinkedin, IconGithub, IconStar, IconExternalLink } from './icons';
 
 const REPO_URL = 'https://github.com/methunt/lineage-tracer';
 const LINKEDIN_URL = 'https://www.linkedin.com/in/methunt/';
-const OTHER_PROJECT_URL = 'https://github.com/methunt/PowerBi/tree/main/Bigquery%20%26%20Dbt%20Cost%20Observability';
+const OTHER_PROJECT_URL = 'https://github.com/methunt/pbi-bigquery-dbt-cost-observability';
 
 /*
  * A credit bar, docked in the flex column rather than floated over the
